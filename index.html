@@ -862,6 +862,14 @@
     border-color: var(--gold-dim);
     box-shadow: 0 0 0 3px var(--gold-glow);
   }
+  .modal-textarea a {
+    color: var(--gold);
+    text-decoration: underline;
+    background: transparent !important;
+  }
+  .modal-textarea a:hover {
+    color: #e8c064;
+  }
   .modal-textarea:empty::before {
     content: attr(data-placeholder);
     color: var(--text-muted);
@@ -3210,20 +3218,22 @@
       String(now.getHours()).padStart(2, '0') + ':' +
       String(now.getMinutes()).padStart(2, '0') + ']';
     var html = editor.innerHTML;
-    // Check if first content is already a timestamp span
+    // Check if first content is already a timestamp span (at top or bottom)
     var tsRe = /^\s*<span[^>]*style="[^"]*color:var\(--text-muted\)[^"]*"[^>]*>\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}\]<\/span>/;
     var match = html.match(tsRe);
     if (match) {
+      // Timestamp already exists at top — replace it in place
       var newSpan = '<span style="color:var(--text-muted);font-size:0.75rem;">' + ts + '</span>';
       html = html.replace(tsRe, newSpan);
       editor.innerHTML = html;
     } else {
-      var tsLine = '<span style="color:var(--text-muted);font-size:0.75rem;">' + ts + '</span><br><br>';
-      var trimmed = html.replace(/^(<br\s*\/?>)*/, '').trim();
+      // Append timestamp at the bottom
+      var tsLine = '<br><br><span style="color:var(--text-muted);font-size:0.75rem;">' + ts + '</span>';
+      var trimmed = html.replace(/^(<br\s*\/?>)*/, '').replace(/(<br\s*\/?>)*$/, '').trim();
       if (!trimmed || trimmed === '') {
-        editor.innerHTML = tsLine;
+        editor.innerHTML = tsLine.trim();
       } else {
-        editor.innerHTML = tsLine + html;
+        editor.innerHTML = html + tsLine;
       }
     }
   }
@@ -3789,6 +3799,19 @@
         statusEl.textContent = _lang === 'en' ? 'Files pasted ✓' : '已粘贴文件 ✓';
         setTimeout(function() { statusEl.textContent = ''; }, 2000);
       }
+    } else {
+      // Strip inline styles from pasted HTML to avoid white backgrounds etc.
+      var htmlData = e.clipboardData.getData('text/html');
+      if (htmlData) {
+        e.preventDefault();
+        var clean = htmlData.replace(/\sstyle\s*=\s*"[^"]*"/gi, '')
+                           .replace(/\sstyle\s*=\s*'[^']*'/gi, '')
+                           .replace(/<\/?(?:font|o:|st1|v:|w:|m:)[^>]*>/gi, '');
+        var editor = document.getElementById('modal-text');
+        document.execCommand('insertHTML', false, clean);
+        var evt = new Event('input', { bubbles: true });
+        editor.dispatchEvent(evt);
+      }
     }
   }
 
@@ -4007,9 +4030,13 @@
       String(now.getDate()).padStart(2, '0') + ' ' +
       String(now.getHours()).padStart(2, '0') + ':' +
       String(now.getMinutes()).padStart(2, '0') + ']';
-    // Insert at top of editor (line above existing content)
-    var tsLine = '<span style="color:var(--text-muted);font-size:0.75rem;">' + ts + '</span><br><br>';
-    editor.innerHTML = tsLine + editor.innerHTML;
+    // Append at bottom of editor
+    var tsLine = '<br><br><span style="color:var(--text-muted);font-size:0.75rem;">' + ts + '</span>';
+    if (!editor.innerHTML.trim() || editor.innerHTML === '<br>') {
+      editor.innerHTML = tsLine.trim();
+    } else {
+      editor.innerHTML = editor.innerHTML + tsLine;
+    }
     editor.focus();
     // Trigger auto-save
     var evt = new Event('input', { bubbles: true });
