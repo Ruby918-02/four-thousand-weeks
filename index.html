@@ -905,6 +905,18 @@
   .modal-textarea div { margin-bottom: 0.4rem; }
   .modal-textarea div:last-child { margin-bottom: 0; }
 
+  /* -- readonly mode for archived weeks -- */
+  .modal-overlay.readonly .fmt-toolbar { display: none; }
+  .modal-overlay.readonly .modal-upload-btn { display: none; }
+  .modal-overlay.readonly .modal-save-btn { display: none; }
+  .modal-overlay.readonly .modal-timestamp-row { display: none; }
+  .modal-overlay.readonly .modal-textarea {
+    background: transparent !important;
+    cursor: default;
+    opacity: 0.7;
+  }
+  .modal-overlay.readonly .modal-drop-hint { display: none; }
+
   /* ── formatting toolbar ── */
   .fmt-toolbar {
     display: flex;
@@ -1532,9 +1544,7 @@
     font-style: italic;
     color: var(--text-muted);
   }
-  .review-entry-text:empty::before {
-    content: '（无文字记录）';
-  }
+  /* review-entry-text empty state now handled by JS */
   .review-entry-text p { margin-bottom: 0.5rem; }
   .review-entry-text p:last-child { margin-bottom: 0; }
   .review-entry .media-grid {
@@ -3245,6 +3255,18 @@
       }
     }
     currentModalWeek = weekIndex;
+
+    // Read-only check for weeks older than ~1 month
+    var modalEl = document.getElementById('week-modal');
+    var currentWeekNum = fData ? Math.ceil(fData.livedW) : 0;
+    var weeksOld = currentWeekNum - weekIndex;
+    var isReadOnly = weeksOld > 4;
+    modalEl.classList.toggle('readonly', isReadOnly);
+    if (isReadOnly) {
+      document.getElementById('modal-text').contentEditable = 'false';
+    } else {
+      document.getElementById('modal-text').contentEditable = 'true';
+    }
     const year = date.getFullYear();
     const month = date.getMonth() + 1;
     const day = date.getDate();
@@ -3308,7 +3330,11 @@
       var editor = document.getElementById('modal-text');
       var text = editor.innerHTML;
       if (isEditorEmpty(text)) text = '';
-      saveEntry(currentModalWeek, { text: text, media: currentMedia }).catch(function() {});
+      if (text === '' && (!currentMedia || currentMedia.length === 0)) {
+        // Nothing meaningful to save
+      } else {
+        saveEntry(currentModalWeek, { text: text, media: currentMedia }).catch(function() {});
+      }
     }
     document.getElementById('week-modal').classList.remove('visible');
     currentModalWeek = null;
@@ -3360,6 +3386,9 @@
     var text = editor.innerHTML;
     // Clean up empty editor content (strip auto-timestamp)
     if (isEditorEmpty(text)) text = '';
+    if (text === '' && (!currentMedia || currentMedia.length === 0)) {
+      return;
+    }
     const status = document.getElementById('modal-status');
     status.textContent = _lang === 'en' ? 'Saving…' : '保存中…';
     try {
@@ -3530,12 +3559,18 @@
   // ── entry markers ──
   async function updateEntryMarkers() {
     try {
-      const keys = await getAllEntryKeys();
-      const keySet = {};
-      keys.forEach(function(k) { keySet[k] = true; });
+      const entries = await getAllEntries();
+      const realEntries = {};
+      entries.forEach(function(e) {
+        var hasText = e.text && !isEditorEmpty(e.text);
+        var hasMedia = e.media && e.media.length > 0;
+        if (hasText || hasMedia) {
+          realEntries[e.weekIndex] = true;
+        }
+      });
       document.querySelectorAll('.week-dot').forEach(function(dot) {
         var idx = parseInt(dot.dataset.week);
-        if (keySet[idx]) {
+        if (realEntries[idx]) {
           dot.classList.add('has-entry');
         } else {
           dot.classList.remove('has-entry');
@@ -3543,7 +3578,7 @@
       });
       document.querySelectorAll('.year-dot').forEach(function(dot) {
         var idx = parseInt(dot.dataset.index);
-        if (keySet[idx]) {
+        if (realEntries[idx]) {
           dot.classList.add('has-entry');
         } else {
           dot.classList.remove('has-entry');
@@ -3711,7 +3746,13 @@
 
     const list = document.createElement('div');
     list.className = 'review-entry-list';
+    var shownCount = 0;
     filtered.forEach(function(entry) {
+      var hasText = entry.text && !isEditorEmpty(entry.text);
+      var hasMedia = entry.media && entry.media.length > 0;
+      if (!hasText && !hasMedia) return;  // Skip empty entries
+      shownCount++;
+
       const el = document.createElement('div');
       el.className = 'review-entry';
       const date = getDateFromWeekIndex(entry.weekIndex, birthDate);
@@ -3737,12 +3778,17 @@
 
       const textEl = document.createElement('div');
       textEl.className = 'review-entry-text';
-      // Convert plain text to HTML for backward compatibility
-      var entryText = entry.text || '';
-      if (entryText && entryText.indexOf('<') === -1) {
-        entryText = entryText.replace(/\n/g, '<br>');
+      if (hasText) {
+        // Convert plain text to HTML for backward compatibility
+        var entryText = entry.text || '';
+        if (entryText && entryText.indexOf('<') === -1) {
+          entryText = entryText.replace(/\n/g, '<br>');
+        }
+        textEl.innerHTML = entryText;
+      } else {
+        // Only media, no text → show bilingual placeholder
+        textEl.textContent = _lang === 'en' ? '(no text)' : '（无文字记录）';
       }
-      textEl.innerHTML = entryText;
       el.appendChild(textEl);
 
       if (entry.media && entry.media.length > 0) {
@@ -3841,6 +3887,10 @@
       var editor = document.getElementById('modal-text');
       var text = editor.innerHTML;
       if (isEditorEmpty(text)) text = '';
+      if (text === '' && (!currentMedia || currentMedia.length === 0)) {
+        // Nothing meaningful to save
+        return;
+      }
       var status = document.getElementById('modal-status');
       saveEntry(currentModalWeek, { text: text, media: currentMedia }).then(function() {
         status.textContent = t('auto-saved') + ' ✓';
