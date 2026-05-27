@@ -1,0 +1,5072 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>四千周 — 生命倒计时</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0b0b14;
+    --surface: rgba(255,255,255,0.03);
+    --surface-border: rgba(255,255,255,0.06);
+    --gold: #d4a548;
+    --gold-dim: rgba(212,165,72,0.3);
+    --gold-glow: rgba(212,165,72,0.15);
+    --coral: #e8685a;
+    --text-primary: #ede4d3;
+    --text-secondary: #8f8373;
+    --text-muted: #5e5548;
+    --dot-lived: var(--gold);
+    --dot-current: #ff7e5f;
+    --dot-remaining: rgba(212,165,72,0.1);
+    --dot-remaining-border: rgba(212,165,72,0.2);
+    --radius: 12px;
+    --font-ui: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', 'Helvetica Neue', sans-serif;
+    --font-display: 'Georgia', 'Noto Serif SC', serif;
+    --font-editor: 'Times New Roman', SimSun, 'Noto Serif CJK SC', serif;
+  }
+
+  html { font-size: 16px; }
+  html.scale-sm { font-size: 14px; }
+  html.scale-md { font-size: 16px; }
+  html.scale-lg { font-size: 18px; }
+  body {
+    font-family: var(--font-ui);
+    background: var(--bg);
+    color: var(--text-primary);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    padding: 2rem 1rem;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .container { max-width: 880px; width: 100%; }
+
+  /* ── header ── */
+  header { text-align: center; margin-bottom: 2.5rem; }
+  header h1 {
+    font-family: var(--font-display);
+    font-size: 3rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    letter-spacing: 0.08em;
+    margin-bottom: 0.2rem;
+  }
+  header h1 small {
+    font-size: 1rem;
+    font-weight: 300;
+    color: var(--text-secondary);
+    letter-spacing: 0.15em;
+    margin-left: 0.6rem;
+  }
+  header .subtitle {
+    font-family: var(--font-display);
+    font-size: 0.95rem;
+    color: var(--gold);
+    letter-spacing: 0.3em;
+    margin-bottom: 1rem;
+  }
+  header blockquote {
+    font-family: var(--font-display);
+    font-size: 0.88rem;
+    color: var(--text-secondary);
+    font-style: italic;
+    max-width: 560px;
+    margin: 0 auto;
+    line-height: 1.7;
+    border-left: 2px solid var(--gold-dim);
+    padding-left: 1.2rem;
+    text-align: left;
+  }
+  header blockquote cite {
+    display: block;
+    margin-top: 0.3rem;
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    font-style: normal;
+  }
+  header .pdf-download {
+    display: inline-block;
+    margin-top: 0.6rem;
+    font-size: 0.78rem;
+    color: var(--gold);
+    text-decoration: none;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+  }
+  header .pdf-download:hover {
+    opacity: 1;
+    text-decoration: underline;
+  }
+
+  /* ── language toggle ── */
+  .lang-toggle {
+    display: inline-flex;
+    margin-top: 0.8rem;
+    border: 1px solid var(--surface-border);
+    border-radius: 20px;
+    overflow: hidden;
+    font-size: 0.78rem;
+    line-height: 1;
+  }
+  .lang-toggle button {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    padding: 0.35rem 0.7rem;
+    cursor: pointer;
+    font-family: var(--font-ui);
+    font-size: inherit;
+    transition: all 0.25s;
+    letter-spacing: 0.04em;
+  }
+  .lang-toggle button.active {
+    color: var(--gold);
+    background: rgba(212,165,72,0.1);
+  }
+  .lang-toggle button:not(.active):hover {
+    color: var(--text-secondary);
+  }
+
+  /* ── scale toggle ── */
+  .scale-toggle {
+    display: inline-flex;
+    margin-top: 0.8rem;
+    margin-left: 0.4rem;
+    border: 1px solid var(--surface-border);
+    border-radius: 20px;
+    overflow: hidden;
+    font-size: 0.78rem;
+    line-height: 1;
+  }
+  .scale-toggle button {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    padding: 0.35rem 0.55rem;
+    cursor: pointer;
+    font-family: var(--font-ui);
+    font-size: inherit;
+    transition: all 0.25s;
+    letter-spacing: 0.04em;
+  }
+  .scale-toggle button.active {
+    color: var(--gold);
+    background: rgba(212,165,72,0.1);
+  }
+  .scale-toggle button:not(.active):hover {
+    color: var(--text-secondary);
+  }
+
+  /* ── stats ── */
+  .stats {
+    display: grid;
+    grid-template-columns: 1.1fr 1fr 0.9fr;
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+  .stat-card {
+    position: relative;
+    background: var(--surface);
+    border: 1px solid var(--surface-border);
+    border-radius: var(--radius);
+    padding: 1.2rem 0.8rem;
+    text-align: center;
+    transition: border-color 0.3s, transform 0.3s, box-shadow 0.3s;
+  }
+  .stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 50%;
+    transform: translateX(-50%);
+    width: 2rem;
+    height: 2px;
+    background: var(--gold-dim);
+    border-radius: 0 0 2px 2px;
+    opacity: 0;
+    transition: opacity 0.3s, width 0.3s;
+  }
+  .stat-card:hover::before {
+    opacity: 1;
+    width: 4rem;
+  }
+  .stat-card.primary::before { display: none; }
+  .stat-card:hover { border-color: rgba(255,255,255,0.12); }
+  .stat-card:not(.primary):hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+  }
+  .stat-card .number {
+    display: block;
+    font-size: 2.2rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+    transition: color 0.4s;
+  }
+  .stat-card .number.gold { color: var(--gold); }
+  .stat-card .number.coral { color: var(--coral); }
+  .stat-card .number.white { color: var(--text-primary); }
+  .stat-card .label {
+    display: block;
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+    letter-spacing: 0.06em;
+    margin-top: 0.25rem;
+  }
+  .stat-card.primary { grid-column: 1 / -1; padding: 0; }
+  .ring-card { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.3rem; }
+  .ring-card svg { display: block; }
+  #progress-ring-arc { transition: stroke-dashoffset 0.5s ease; }
+  .bar-card { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.2rem; }
+  .age-card { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.2rem; }
+  .bar-track {
+    width: 80%;
+    height: 10px;
+    background: var(--surface-border);
+    border-radius: 5px;
+    overflow: hidden;
+    margin: 0.3rem auto 0.2rem;
+  }
+  .bar-fill {
+    height: 100%;
+    width: 0%;
+    background: var(--gold);
+    border-radius: 5px;
+    transition: width 0.5s ease;
+  }
+  .stat-card.primary .number { font-size: 3.6rem; }
+
+  /* ── flip card ── */
+  .flip-card {
+    perspective: 1000px;
+    cursor: pointer;
+    min-height: 150px;
+  }
+  .flip-inner {
+    display: grid;
+    grid-template: 1fr / 1fr;
+    transform-style: preserve-3d;
+    transition: transform 0.65s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .flip-card.flipped .flip-inner {
+    transform: rotateY(180deg);
+  }
+  .flip-front, .flip-back {
+    grid-area: 1 / 1;
+    backface-visibility: hidden;
+    padding: 1.6rem 0.8rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+  .flip-back {
+    transform: rotateY(180deg);
+    padding: 1.6rem 1.4rem;
+    justify-content: center;
+    text-align: center;
+    overflow-y: auto;
+    max-height: 70vh;
+    gap: 0.5rem;
+    background: radial-gradient(ellipse at center, rgba(212,165,72,0.1) 0%, transparent 70%);
+    border: 1px solid var(--gold-dim);
+    border-radius: var(--radius);
+  }
+  .flip-back .flip-quote {
+    font-family: var(--font-display);
+    font-size: 1.05rem;
+    color: var(--text-primary);
+    font-style: italic;
+    line-height: 1.6;
+    width: 100%;
+    text-align: center;
+  }
+  .flip-back .flip-quote-remain {
+    color: var(--gold);
+    font-size: 0.85rem;
+  }
+  .flip-hint {
+    display: inline-block;
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    letter-spacing: 0.08em;
+    margin-top: 0.6rem;
+    transition: all 0.3s;
+    text-align: center;
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 20px;
+    padding: 0.25rem 0.9rem;
+    background: rgba(255,255,255,0.03);
+  }
+  .flip-card:hover .flip-hint {
+    color: var(--text-secondary);
+    border-color: rgba(255,255,255,0.15);
+    background: rgba(255,255,255,0.06);
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .flip-hint {
+      animation: hint-breathe 3s ease-in-out infinite;
+    }
+  }
+  @keyframes hint-breathe {
+    0%, 100% { opacity: 0.6; }
+    50% { opacity: 1; }
+  }
+  .flip-hint.back { margin-top: 0.6rem; }
+
+  /* ── controls ── */
+  .controls {
+    background: var(--surface);
+    border: 1px solid var(--surface-border);
+    border-radius: var(--radius);
+    padding: 1.4rem 1.6rem;
+    margin-bottom: 2rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.2rem 2rem;
+    align-items: flex-end;
+  }
+  .control-group { flex: 1 1 200px; min-width: 0; }
+  .control-group label {
+    display: block;
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+    letter-spacing: 0.04em;
+    margin-bottom: 0.35rem;
+    text-transform: uppercase;
+  }
+  .birth-selects {
+    display: flex;
+    gap: 0.4rem;
+    align-items: center;
+  }
+  .birth-field {
+    display: flex;
+    align-items: center;
+    gap: 0.1rem;
+  }
+  .birth-field select {
+    font-family: var(--font-ui);
+    font-size: 0.95rem;
+    padding: 0.45rem 1.3rem 0.45rem 0.55rem;
+    border-radius: 6px;
+    border: 1px solid var(--surface-border);
+    background: rgba(255,255,255,0.04);
+    color: var(--text-primary);
+    outline: none;
+    cursor: pointer;
+    -webkit-appearance: none;
+    appearance: none;
+    transition: border-color 0.25s, background 0.25s;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='6'%3E%3Cpath d='M0 0l4 6 4-6' fill='none' stroke='%238f8373' stroke-width='1.5'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.4rem center;
+    background-size: 8px 6px;
+  }
+  .birth-field select:hover {
+    border-color: rgba(255,255,255,0.15);
+    background: rgba(255,255,255,0.06);
+  }
+  .birth-field select:focus {
+    border-color: var(--gold-dim);
+    box-shadow: 0 0 0 3px var(--gold-glow);
+  }
+  .birth-field option {
+    background: #1c1c2a;
+    color: var(--text-primary);
+  }
+  .birth-suffix {
+    font-size: 0.95rem;
+    color: var(--text-secondary);
+    user-select: none;
+  }
+
+  .slider-row {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+  }
+  .slider-row input[type="range"] {
+    flex: 1;
+    -webkit-appearance: none;
+    appearance: none;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--surface-border);
+    outline: none;
+    cursor: pointer;
+  }
+  .slider-row input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    background: var(--gold);
+    border: 2px solid var(--bg);
+    cursor: pointer;
+    transition: box-shadow 0.2s;
+  }
+  .slider-row input[type="range"]::-webkit-slider-thumb:hover {
+    box-shadow: 0 0 0 4px var(--gold-glow);
+  }
+  .slider-row input[type="range"]::-moz-range-thumb {
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    background: var(--gold);
+    border: 2px solid var(--bg);
+    cursor: pointer;
+  }
+  .slider-value {
+    font-family: var(--font-display);
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--gold);
+    min-width: 3.6rem;
+    text-align: right;
+    white-space: nowrap;
+  }
+  .end-date-label {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    text-align: right;
+    margin-top: 2px;
+    letter-spacing: 0.04em;
+  }
+
+  /* ── week grid ── */
+  .grid-section {
+    background: var(--surface);
+    border: 1px solid var(--surface-border);
+    border-radius: var(--radius);
+    padding: 1.2rem;
+    margin-bottom: 2rem;
+  }
+  .grid-section .grid-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 0.8rem;
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+    letter-spacing: 0.04em;
+  }
+  .grid-section .grid-header .legend {
+    display: flex;
+    gap: 0.8rem;
+  }
+  .grid-section .grid-header .legend span {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+  .legend-dot {
+    display: inline-block;
+    width: 10px; height: 10px;
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+  .legend-dot.lived { background: var(--dot-lived); }
+  .legend-dot.remaining { background: var(--dot-remaining); border: 1px solid var(--dot-remaining-border); }
+  .legend-dot.current { background: var(--dot-current); }
+
+  .grid-scroll {
+    max-height: 540px;
+    overflow-y: auto;
+    padding-right: 4px;
+  }
+  .grid-scroll::-webkit-scrollbar { width: 4px; }
+  .grid-scroll::-webkit-scrollbar-thumb { background: var(--surface-border); border-radius: 2px; }
+
+  .week-grid {
+    display: grid;
+    grid-template-columns: 2.2rem repeat(52, 1fr);
+    gap: 1.5px;
+  }
+  .week-grid .year-label {
+    font-size: 0.6rem;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding-right: 4px;
+    user-select: none;
+    height: 8px;
+    line-height: 8px;
+  }
+  .week-dot {
+    aspect-ratio: 1;
+    border-radius: 1.5px;
+    transition: background 0.15s, border-color 0.15s, transform 0.15s;
+    cursor: default;
+    position: relative;
+    min-width: 4px;
+    min-height: 4px;
+  }
+  .week-dot.lived {
+    background: var(--dot-lived);
+    border: 1px solid transparent;
+  }
+  .week-dot.remaining {
+    background: var(--dot-remaining);
+    border: 1px solid var(--dot-remaining-border);
+  }
+  .week-dot.current {
+    background: var(--dot-current);
+    border: 1px solid var(--dot-current);
+    box-shadow: 0 0 0 3px rgba(255,126,95,0.15);
+    z-index: 1;
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .week-dot.current {
+      animation: pulse-current 2s ease-in-out infinite;
+    }
+  }
+  @keyframes pulse-current {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(255,126,95,0.3); }
+    50% { box-shadow: 0 0 0 5px rgba(255,126,95,0); }
+  }
+  .week-dot.lived:hover,
+  .week-dot.remaining:hover {
+    transform: scale(1.6);
+    z-index: 2;
+  }
+  .week-dot.lived:hover { border-color: #fff3; }
+  .week-dot.remaining:hover { border-color: rgba(255,255,255,0.3); }
+
+  .week-dot .tooltip {
+    display: none;
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1c1c2a;
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 6px;
+    padding: 0.3rem 0.6rem;
+    font-size: 0.72rem;
+    color: var(--text-primary);
+    white-space: nowrap;
+    pointer-events: none;
+    z-index: 10;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+  }
+  .week-dot:hover .tooltip { display: block; }
+
+  /* ── footer ── */
+  footer {
+    text-align: center;
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    padding: 1rem 0 2rem;
+  }
+  footer a { color: var(--text-secondary); text-decoration: none; }
+  footer a:hover { color: var(--gold); }
+
+  /* ── teaser quote (below grid) ── */
+  #teaser-quote {
+    background: var(--surface);
+    border: 1px solid var(--surface-border);
+    border-radius: var(--radius);
+    padding: 1.2rem 1.4rem;
+    margin-bottom: 1.5rem;
+    min-height: 3em;
+    transition: opacity 0.5s;
+  }
+  #teaser-quote .teaser-context {
+    text-align: center;
+    font-family: var(--font-display);
+    font-size: 0.92rem;
+    color: var(--text-secondary);
+    font-style: italic;
+    line-height: 1.6;
+  }
+  #teaser-quote .teaser-accent {
+    width: 1.5rem;
+    height: 1px;
+    background: var(--gold-dim);
+    margin: 1rem auto;
+  }
+  #teaser-quote .teaser-remain {
+    text-align: center;
+    font-family: var(--font-display);
+    font-size: 0.88rem;
+    color: var(--gold);
+    font-style: italic;
+    line-height: 1.55;
+  }
+
+  /* ── responsive ── */
+  @media (max-width: 640px) {
+    body { padding: 1rem 0.6rem; }
+    header h1 { font-size: 2rem; }
+    header blockquote { font-size: 0.82rem; padding-left: 0.8rem; }
+    .stats { grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+    .stat-card { padding: 0.8rem 0.4rem; }
+    .stat-card .number { font-size: 1.5rem; }
+    .stat-card.primary { grid-column: 1 / -1; }
+    .stat-card.primary .number { font-size: 2.4rem; }
+    .ring-card svg { width: 70px; height: 70px; }
+    .bar-track { height: 8px; }
+    .controls { padding: 1rem; }
+    .control-group { flex: 1 1 100%; }
+    .grid-section { padding: 0.6rem; }
+    .grid-scroll { max-height: 360px; }
+    .week-grid { gap: 1px; grid-template-columns: 1.6rem repeat(52, 1fr); }
+    .week-grid .year-label { font-size: 0.5rem; height: 6px; line-height: 6px; }
+  }
+
+  /* ── state ── */
+  .hidden { display: none !important; }
+  .error-msg {
+    color: var(--coral);
+    font-size: 0.82rem;
+    margin-top: 0.3rem;
+    text-align: center;
+  }
+
+  /* -- view switcher -- */
+  .view-switcher { display: flex; gap: 0.4rem; margin-bottom: 0.6rem; }
+  .view-btn {
+    font-family: var(--font-ui);
+    font-size: 0.78rem;
+    padding: 0.3rem 0.8rem;
+    border-radius: 6px;
+    border: 1px solid var(--surface-border);
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .view-btn:hover { border-color: var(--gold-dim); color: var(--text-secondary); }
+  .view-btn.active {
+    background: rgba(212,165,72,0.1);
+    border-color: var(--gold-dim);
+    color: var(--gold);
+  }
+  .year-view { display: none; }
+  .year-view.visible { display: block; }
+  .year-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.8rem; }
+  .year-nav-arrow {
+    font-family: var(--font-ui);
+    font-size: 0.85rem;
+    padding: 0.3rem 0.7rem;
+    border-radius: 6px;
+    border: 1px solid var(--surface-border);
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .year-nav-arrow:hover { border-color: var(--gold-dim); color: var(--gold); }
+  .year-nav-label {
+    font-family: var(--font-display);
+    font-size: 1rem;
+    color: var(--text-primary);
+    font-weight: 600;
+    background: transparent;
+    border: none;
+    text-align: center;
+    width: 80px;
+    outline: none;
+    cursor: text;
+    caret-color: var(--gold);
+  }
+  .year-nav-label:focus {
+    border-bottom: 1px solid var(--gold-dim);
+    color: var(--gold);
+  }
+  /* ── year-view monthly grid ── */
+  .year-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px 14px;
+    padding: 8px 0;
+  }
+  .month-block {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+  }
+  .month-label {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    font-weight: 500;
+    padding-bottom: 5px;
+    border-bottom: 1px solid var(--surface-border);
+    letter-spacing: 0.04em;
+    user-select: none;
+  }
+  .month-block.current-month .month-label {
+    color: var(--gold);
+    font-weight: 700;
+    border-bottom-color: var(--gold-dim);
+  }
+  .month-block.current-month .month-label::after {
+    content: ' ← 本月';
+    font-size: 0.65rem;
+    font-weight: 400;
+    color: var(--gold-dim);
+    margin-left: 4px;
+  }
+  .month-weeks {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  .year-dot {
+    width: 22px;
+    height: 22px;
+    border-radius: 3px;
+    cursor: pointer;
+    position: relative;
+    transition: transform 0.15s, box-shadow 0.15s;
+    flex-shrink: 0;
+  }
+  .year-dot.lived { background: var(--dot-lived); border: 1px solid transparent; }
+  .year-dot.remaining { background: var(--dot-remaining); border: 1px solid var(--dot-remaining-border); }
+  .year-dot.current { background: var(--dot-current); border: 1px solid var(--dot-current); box-shadow: 0 0 0 3px rgba(255,126,95,0.15); z-index: 1; }
+  .year-dot:hover { transform: scale(1.4); z-index: 2; }
+  .year-dot.lived:hover { border-color: rgba(255,255,255,0.3); }
+  .year-dot.remaining:hover { border-color: rgba(255,255,255,0.3); }
+  .year-dot.has-entry::after {
+    content: '';
+    position: absolute;
+    bottom: 2px; right: 2px;
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--gold);
+    z-index: 3;
+    box-shadow: 0 0 3px rgba(212,165,72,0.5);
+  }
+  .week-dot.has-entry { box-shadow: inset 0 0 0 1px var(--gold-dim); }
+
+  @media (max-width: 768px) {
+    .year-grid { grid-template-columns: repeat(2, 1fr); gap: 14px 12px; }
+    .year-dot { width: 26px; height: 26px; }
+    .month-block.current-month .month-label::after { content: ' ←'; }
+  }
+  @media (max-width: 480px) {
+    .year-grid { grid-template-columns: repeat(2, 1fr); gap: 12px 10px; }
+    .year-dot { width: 30px; height: 30px; border-radius: 4px; }
+    .month-block.current-month .month-label::after { content: ''; }
+  }
+
+  /* -- modal -- */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 1000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    backdrop-filter: blur(4px);
+  }
+  .modal-overlay.visible { display: flex; }
+  .modal-content {
+    background: #15151f;
+    border: 1px solid var(--surface-border);
+    border-radius: 16px;
+    width: 100%;
+    max-width: 720px;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 24px 64px rgba(0,0,0,0.5);
+    animation: modal-in 0.25s ease;
+  }
+  @keyframes modal-in {
+    from { opacity: 0; transform: translateY(20px) scale(0.96); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.2rem 1.4rem 0.4rem;
+  }
+  .modal-week-info {
+    font-family: var(--font-display);
+    font-size: 1.1rem;
+    color: var(--gold);
+    font-weight: 700;
+  }
+  .modal-date-range {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    padding: 0 1.4rem 0.8rem;
+  }
+  .modal-close {
+    font-size: 1.2rem;
+    color: var(--text-muted);
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0.2rem;
+    line-height: 1;
+  }
+  .modal-close:hover { color: var(--text-primary); }
+  .modal-fullscreen-btn {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 1rem;
+    padding: 0.2rem;
+    line-height: 1;
+    transition: color 0.2s;
+  }
+  .modal-fullscreen-btn:hover { color: var(--text-primary); }
+  .modal-overlay.fullscreen .modal-content {
+    max-width: 95vw;
+    max-height: 95vh;
+    width: 95vw;
+    height: 95vh;
+  }
+  .modal-overlay.fullscreen .modal-textarea {
+    min-height: 200px;
+  }
+  .modal-overlay.fullscreen .media-item img { max-width: 180px; max-height: 120px; }
+  .modal-overlay.fullscreen .media-item video { max-width: 320px; max-height: 200px; }
+  .modal-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0.4rem 1.4rem 1rem;
+    position: relative;
+  }
+  .modal-textarea {
+    width: 100%;
+    min-height: 120px;
+    padding: 0.8rem;
+    border-radius: 8px;
+    border: 1px solid var(--surface-border);
+    background: rgba(255,255,255,0.03);
+    color: var(--text-primary);
+    font-family: var(--font-editor);
+    font-size: 1rem;
+    line-height: 1.8;
+    outline: none;
+    transition: border-color 0.2s;
+    white-space: pre-wrap;
+    overflow-wrap: break-word;
+  }
+  .modal-textarea:focus {
+    border-color: var(--gold-dim);
+    box-shadow: 0 0 0 3px var(--gold-glow);
+  }
+  .modal-textarea:empty::before {
+    content: attr(data-placeholder);
+    color: var(--text-muted);
+    pointer-events: none;
+  }
+  .modal-textarea .editor-ts {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-bottom: 0.6rem;
+    opacity: 0.7;
+    user-select: none;
+  }
+  .modal-textarea p { margin-bottom: 0.6rem; }
+  .modal-textarea p:last-child { margin-bottom: 0; }
+  .modal-textarea div { margin-bottom: 0.4rem; }
+  .modal-textarea div:last-child { margin-bottom: 0; }
+
+  /* ── formatting toolbar ── */
+  .fmt-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.2rem;
+    padding: 0.4rem 0;
+    margin-bottom: 0.3rem;
+    border-bottom: 1px solid var(--surface-border);
+    align-items: center;
+  }
+  .fmt-btn {
+    font-family: var(--font-ui);
+    font-size: 0.78rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.15s;
+    line-height: 1.2;
+    min-width: 26px;
+    text-align: center;
+  }
+  .fmt-btn:hover {
+    border-color: var(--surface-border);
+    background: rgba(255,255,255,0.04);
+    color: var(--text-primary);
+  }
+  .fmt-btn.active {
+    color: var(--gold);
+    background: rgba(212,165,72,0.1);
+    border-color: var(--gold-dim);
+  }
+  .fmt-btn.fmt-bold { font-weight: 700; }
+  .fmt-btn.fmt-underline { text-decoration: underline; }
+  .fmt-btn.fmt-highlight { background: rgba(212,165,72,0.15); }
+  .fmt-btn.fmt-highlight:hover { background: rgba(212,165,72,0.25); }
+  .hl-custom {
+    background-color: rgba(212,165,72,0.3);
+    border-radius: 2px;
+    padding: 0 1px;
+  }
+  .hl-icon {
+    background: rgba(212,165,72,0.3);
+    color: #ede4d3;
+    padding: 0 2px;
+    border-radius: 2px;
+  }
+  .fmt-separator {
+    width: 1px;
+    height: 18px;
+    background: var(--surface-border);
+    margin: 0 0.2rem;
+    flex-shrink: 0;
+  }
+  .fmt-fontsize {
+    font-family: var(--font-ui);
+    font-size: 0.72rem;
+    padding: 0.2rem 0.3rem;
+    border-radius: 4px;
+    border: 1px solid var(--surface-border);
+    background: rgba(255,255,255,0.04);
+    color: var(--text-primary);
+    outline: none;
+    cursor: pointer;
+  }
+  .fmt-fontsize:focus {
+    border-color: var(--gold-dim);
+  }
+  .fmt-fontsize option {
+    background: #1c1c2a;
+    color: var(--text-primary);
+  }
+
+  /* ── paste / drag-and-drop zone ── */
+  .modal-drop-hint {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    text-align: center;
+    margin-top: 0.5rem;
+    padding: 0.3rem;
+    opacity: 0.55;
+    user-select: none;
+  }
+  .modal-dropzone-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    background: rgba(21,21,31,0.93);
+    border: 2px dashed var(--gold-dim);
+    border-radius: 12px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+    z-index: 10;
+    font-size: 0.95rem;
+    color: var(--gold);
+  }
+  .modal-dropzone-overlay.visible {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .modal-dropzone-overlay .drop-icon {
+    font-size: 2rem;
+    line-height: 1;
+  }
+
+  .media-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.8rem;
+  }
+  .media-item {
+    position: relative;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid var(--surface-border);
+  }
+  .media-item img { display: block; max-width: 120px; max-height: 80px; object-fit: cover; }
+  .media-item audio { width: 200px; height: 40px; }
+  .media-item video { display: block; max-width: 220px; max-height: 130px; }
+  .media-delete {
+    position: absolute;
+    top: 2px; right: 2px;
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    background: rgba(0,0,0,0.6);
+    color: #fff;
+    border: none;
+    font-size: 0.65rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+  .media-item:hover .media-delete { opacity: 1; }
+  /* document file card */
+  .media-item.document {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.7rem;
+    background: rgba(255,255,255,0.03);
+    border-radius: 8px;
+    border: 1px solid var(--surface-border);
+    min-width: 180px;
+    max-width: 100%;
+  }
+  .media-item.document .file-ext {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--gold);
+    background: var(--gold-glow);
+    padding: 0.2rem 0.35rem;
+    border-radius: 4px;
+    text-transform: uppercase;
+    flex-shrink: 0;
+    font-family: var(--font-ui);
+  }
+  .media-item.document .file-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+  }
+  .media-item.document .file-name {
+    font-size: 0.78rem;
+    color: var(--text-primary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .media-item.document .file-size {
+    font-size: 0.65rem;
+    color: var(--text-muted);
+  }
+  .media-item.document .download-btn {
+    flex-shrink: 0;
+    font-size: 0.7rem;
+    padding: 0.25rem 0.55rem;
+    border-radius: 4px;
+    border: 1px solid var(--surface-border);
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s;
+    text-decoration: none;
+  }
+  .media-item.document .download-btn:hover {
+    border-color: var(--gold-dim);
+    color: var(--gold);
+  }
+  /* PDF embed preview */
+  .media-item.document embed {
+    display: block;
+    width: 100%;
+    height: 280px;
+    border-radius: 4px;
+    border: none;
+  }
+  .media-item.document.has-preview {
+    flex-direction: column;
+    padding: 0.5rem;
+    min-width: 220px;
+    max-width: 320px;
+  }
+  .media-item.document.has-preview .doc-preview-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    margin-top: 0.3rem;
+  }
+  .modal-overlay.fullscreen .media-item.document embed { height: 420px; }
+  .modal-overlay.fullscreen .media-item.document { max-width: 480px; }
+  .modal-footer {
+    display: flex;
+    gap: 0.5rem;
+    padding: 0.8rem 1.4rem 1.2rem;
+    border-top: 1px solid var(--surface-border);
+    flex-wrap: wrap;
+  }
+  .modal-upload-btn {
+    font-size: 0.78rem;
+    padding: 0.4rem 0.8rem;
+    border-radius: 6px;
+    border: 1px solid var(--surface-border);
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .modal-upload-btn:hover { border-color: var(--gold-dim); color: var(--gold); }
+  .modal-upload-btn input[type="file"] { display: none; }
+  .modal-save-btn {
+    margin-left: auto;
+    font-size: 0.85rem;
+    padding: 0.4rem 1.2rem;
+    border-radius: 6px;
+    border: 1px solid var(--gold-dim);
+    background: rgba(212,165,72,0.1);
+    color: var(--gold);
+    cursor: pointer;
+    transition: all 0.2s;
+    font-weight: 600;
+  }
+  .modal-save-btn:hover { background: rgba(212,165,72,0.2); }
+  .modal-share-btn {
+    font-size: 0.78rem;
+    padding: 0.4rem 0.8rem;
+    border-radius: 6px;
+    border: 1px solid var(--surface-border);
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s;
+    line-height: 1;
+  }
+  .modal-share-btn:hover { border-color: var(--gold-dim); color: var(--gold); }
+  .share-copied-toast {
+    position: fixed;
+    bottom: 5rem;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(21,21,31,0.95);
+    border: 1px solid var(--gold-dim);
+    color: var(--gold);
+    padding: 0.5rem 1.2rem;
+    border-radius: 8px;
+    font-size: 0.82rem;
+    z-index: 9999;
+    opacity: 0;
+    transition: opacity 0.3s;
+    pointer-events: none;
+  }
+  .share-copied-toast.show { opacity: 1; }
+  .agent-share-btn {
+    display: inline-block;
+    font-size: 0.7rem;
+    padding: 0.2rem 0.5rem;
+    margin-top: 0.4rem;
+    border-radius: 4px;
+    border: 1px solid var(--surface-border);
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.2s;
+    line-height: 1;
+    opacity: 0.5;
+  }
+  .agent-share-btn:hover { opacity: 1; border-color: var(--gold-dim); color: var(--gold); }
+  .review-entry-timestamp {
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    margin-top: 0.3rem;
+    opacity: 0.6;
+  }
+  .modal-status {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    padding: 0 1.4rem 0.3rem;
+    text-align: right;
+    min-height: 1.2em;
+  }
+
+  /* -- date locator -- */
+  .date-locator {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.6rem 0;
+    margin-bottom: 0.4rem;
+    flex-wrap: wrap;
+  }
+  .date-locator label {
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+    white-space: nowrap;
+  }
+  .date-locator-btn {
+    font-family: var(--font-ui);
+    font-size: 0.78rem;
+    padding: 0.35rem 0.75rem;
+    border-radius: 6px;
+    border: 1px solid var(--surface-border);
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .date-locator-btn:hover {
+    border-color: var(--gold-dim);
+    color: var(--gold);
+  }
+  .date-locator-btn.primary {
+    background: rgba(212,165,72,0.1);
+    border-color: var(--gold-dim);
+    color: var(--gold);
+  }
+  .date-locator-btn.primary:hover {
+    background: rgba(212,165,72,0.2);
+  }
+  .date-locator-info {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    margin-left: 0.3rem;
+  }
+
+  /* -- locator dropdown selects -- */
+  .locator-selects {
+    display: flex;
+    gap: 0.3rem;
+    align-items: center;
+  }
+  .locator-field {
+    display: flex;
+    align-items: center;
+    gap: 0.1rem;
+  }
+  .locator-field select {
+    font-family: var(--font-ui);
+    font-size: 0.85rem;
+    padding: 0.3rem 1.1rem 0.3rem 0.45rem;
+    border-radius: 6px;
+    border: 1px solid var(--surface-border);
+    background: rgba(255,255,255,0.04);
+    color: var(--text-primary);
+    outline: none;
+    cursor: pointer;
+    -webkit-appearance: none;
+    appearance: none;
+    transition: border-color 0.25s, background 0.25s;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='6'%3E%3Cpath d='M0 0l4 6 4-6' fill='none' stroke='%238f8373' stroke-width='1.5'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.35rem center;
+    background-size: 8px 6px;
+  }
+  .locator-field select:hover {
+    border-color: rgba(255,255,255,0.15);
+    background: rgba(255,255,255,0.06);
+  }
+  .locator-field select:focus {
+    border-color: var(--gold-dim);
+    box-shadow: 0 0 0 3px var(--gold-glow);
+  }
+  .locator-field option {
+    background: #1c1c2a;
+    color: var(--text-primary);
+  }
+  .locator-suffix {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    user-select: none;
+  }
+
+  /* -- modal timestamp -- */
+  .modal-timestamp-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 1.4rem 0.8rem;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+    border-bottom: 1px solid transparent;
+    margin-bottom: 0.3rem;
+  }
+  .modal-timestamp-label {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+  }
+  .modal-timestamp-btn {
+    font-family: var(--font-ui);
+    font-size: 0.72rem;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    border: 1px solid var(--surface-border);
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .modal-timestamp-btn:hover {
+    border-color: var(--gold-dim);
+    color: var(--gold);
+  }
+  .auto-ts-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    cursor: pointer;
+    user-select: none;
+    padding: 0.2rem 0.4rem;
+    border-radius: 4px;
+    border: 1px solid transparent;
+    transition: all 0.2s;
+  }
+  .auto-ts-toggle:hover {
+    color: var(--text-secondary);
+    border-color: var(--surface-border);
+  }
+  .auto-ts-toggle input[type="checkbox"] {
+    accent-color: var(--gold);
+    cursor: pointer;
+  }
+
+  /* -- review view -- */
+  .review-view {
+    display: none;
+  }
+  .review-view.visible {
+    display: block;
+  }
+  .review-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+  }
+  .review-filter-btn {
+    font-family: var(--font-ui);
+    font-size: 0.78rem;
+    padding: 0.3rem 0.7rem;
+    border-radius: 6px;
+    border: 1px solid var(--surface-border);
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .review-filter-btn:hover {
+    border-color: var(--gold-dim);
+    color: var(--text-secondary);
+  }
+  .review-filter-btn.active {
+    background: rgba(212,165,72,0.1);
+    border-color: var(--gold-dim);
+    color: var(--gold);
+  }
+  .review-filter-range {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+    margin-bottom: 0.8rem;
+  }
+  .review-filter-range.hidden {
+    display: none;
+  }
+  .review-picker { display: inline-flex; align-items: center; gap: 0.3rem; }
+  .review-picker.hidden { display: none; }
+  .review-filter-range input[type="date"] {
+    font-family: var(--font-ui);
+    font-size: 0.78rem;
+    padding: 0.3rem 0.5rem;
+    border-radius: 6px;
+    border: 1px solid var(--surface-border);
+    background: rgba(255,255,255,0.04);
+    color: var(--text-primary);
+    outline: none;
+    color-scheme: dark;
+  }
+  .review-filter-range input[type="date"]:focus {
+    border-color: var(--gold-dim);
+    box-shadow: 0 0 0 3px var(--gold-glow);
+  }
+  .review-filter-range .date-locator-btn {
+    font-size: 0.75rem;
+    padding: 0.3rem 0.6rem;
+  }
+  .review-summary {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin-bottom: 1rem;
+    padding: 0.6rem 0.8rem;
+    background: var(--surface);
+    border: 1px solid var(--surface-border);
+    border-radius: 8px;
+    font-style: italic;
+  }
+  .review-entry-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+  }
+  .review-entry {
+    background: var(--surface);
+    border: 1px solid var(--surface-border);
+    border-radius: 10px;
+    padding: 1rem 1.2rem;
+    transition: border-color 0.2s;
+  }
+  .review-entry:hover {
+    border-color: rgba(255,255,255,0.12);
+  }
+  .review-entry-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 0.5rem;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+  }
+  .review-entry-week {
+    font-family: var(--font-display);
+    font-size: 0.95rem;
+    color: var(--gold);
+    font-weight: 600;
+  }
+  .review-entry-date {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+  }
+  .review-entry-text {
+    font-size: 0.88rem;
+    line-height: 1.8;
+    color: var(--text-primary);
+    margin-bottom: 0.6rem;
+    font-family: var(--font-editor);
+  }
+  .review-entry-text:empty {
+    font-style: italic;
+    color: var(--text-muted);
+  }
+  .review-entry-text:empty::before {
+    content: '（无文字记录）';
+  }
+  .review-entry-text p { margin-bottom: 0.5rem; }
+  .review-entry-text p:last-child { margin-bottom: 0; }
+  .review-entry .media-grid {
+    margin-top: 0;
+  }
+  .review-entry .media-item img { max-width: 100px; max-height: 70px; }
+  .review-entry .media-item video { max-width: 180px; max-height: 100px; }
+  .review-entry .media-item audio { width: 160px; height: 36px; }
+  .review-entry .media-item.document { min-width: 140px; max-width: 220px; }
+  .review-empty {
+    text-align: center;
+    padding: 2rem;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+  }
+
+  /* -- AI agent -- */
+  .agent-toggle {
+    position: fixed;
+    bottom: 1.5rem;
+    right: 1.5rem;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    border: 1px solid var(--gold-dim);
+    background: rgba(21,21,31,0.95);
+    color: var(--gold);
+    font-size: 1.5rem;
+    cursor: pointer;
+    z-index: 900;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+    transition: transform 0.2s, box-shadow 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(8px);
+  }
+  .agent-toggle:hover {
+    transform: scale(1.08);
+    box-shadow: 0 6px 28px rgba(212,165,72,0.2);
+    border-color: var(--gold);
+  }
+  .agent-toggle.active {
+    border-color: var(--gold);
+    box-shadow: 0 0 0 4px var(--gold-glow);
+  }
+
+  .agent-panel {
+    position: fixed;
+    bottom: 5rem;
+    right: 1.5rem;
+    width: 380px;
+    height: 520px;
+    max-height: calc(100vh - 7rem);
+    background: #15151f;
+    border: 1px solid var(--surface-border);
+    border-radius: 16px;
+    display: none;
+    flex-direction: column;
+    z-index: 899;
+    box-shadow: 0 16px 48px rgba(0,0,0,0.6);
+    animation: agent-in 0.3s ease;
+  }
+  .agent-panel.visible { display: flex; }
+  @keyframes agent-in {
+    from { opacity: 0; transform: translateY(16px) scale(0.95); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  .agent-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.8rem 1rem;
+    border-bottom: 1px solid var(--surface-border);
+    flex-shrink: 0;
+  }
+  .agent-header-info {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .agent-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--gold-glow);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+  }
+  .agent-name {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+  .agent-subtitle {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    margin-left: 0.2rem;
+  }
+
+  /* -- golden retriever dog icon -- */
+  .dog-icon {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+  .agent-toggle .dog-icon {
+    width: 32px;
+    height: 32px;
+    margin: 0 auto;
+  }
+  .dog-tail-group {
+    animation: wagTail 0.5s ease-in-out infinite;
+    transform-origin: 74px 68px;
+  }
+  @keyframes wagTail {
+    0%, 100% { transform: rotate(-8deg); }
+    50% { transform: rotate(10deg); }
+  }
+  .dog-bounce {
+    animation: dogBounce 2s ease-in-out infinite;
+  }
+  @keyframes dogBounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-2px); }
+  }
+  .agent-avatar .dog-icon {
+    width: 22px;
+    height: 22px;
+  }
+  .agent-avatar .dog-bounce {
+    animation-duration: 2.5s;
+  }
+  .agent-header-close {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 1rem;
+    cursor: pointer;
+    padding: 0.2rem;
+    line-height: 1;
+  }
+  .agent-header-close:hover { color: var(--text-primary); }
+
+  .agent-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0.8rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+  }
+  .agent-messages::-webkit-scrollbar { width: 4px; }
+  .agent-messages::-webkit-scrollbar-thumb { background: var(--surface-border); border-radius: 2px; }
+
+  .agent-msg, .user-msg {
+    max-width: 88%;
+    padding: 0.6rem 0.9rem;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    line-height: 1.7;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .agent-msg {
+    align-self: flex-start;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--surface-border);
+    color: var(--text-primary);
+    border-bottom-left-radius: 4px;
+  }
+  .user-msg {
+    align-self: flex-end;
+    background: rgba(212,165,72,0.12);
+    border: 1px solid var(--gold-dim);
+    color: var(--gold);
+    border-bottom-right-radius: 4px;
+  }
+  .agent-msg .msg-label {
+    display: block;
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    margin-bottom: 0.3rem;
+    font-weight: 600;
+  }
+  .agent-msg .msg-label .dog-icon {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    vertical-align: middle;
+    margin-right: 0.15rem;
+  }
+
+  .agent-typing {
+    align-self: flex-start;
+    display: none;
+    padding: 0.6rem 0.9rem;
+    border-radius: 12px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--surface-border);
+    border-bottom-left-radius: 4px;
+    gap: 4px;
+  }
+  .agent-typing.visible { display: flex; }
+  .agent-typing span {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--text-muted);
+    animation: typing-bounce 1.4s ease-in-out infinite;
+  }
+  .agent-typing span:nth-child(2) { animation-delay: 0.2s; }
+  .agent-typing span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes typing-bounce {
+    0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+    30% { transform: translateY(-6px); opacity: 1; }
+  }
+
+  .agent-input-area {
+    display: flex;
+    gap: 0.4rem;
+    padding: 0.6rem 0.8rem 0.8rem;
+    border-top: 1px solid var(--surface-border);
+    flex-shrink: 0;
+  }
+  .agent-input {
+    flex: 1;
+    font-family: var(--font-ui);
+    font-size: 0.85rem;
+    padding: 0.5rem 0.7rem;
+    border-radius: 8px;
+    border: 1px solid var(--surface-border);
+    background: rgba(255,255,255,0.03);
+    color: var(--text-primary);
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .agent-input:focus {
+    border-color: var(--gold-dim);
+    box-shadow: 0 0 0 3px var(--gold-glow);
+  }
+  .agent-input::placeholder { color: var(--text-muted); }
+  .agent-send {
+    font-family: var(--font-ui);
+    font-size: 0.82rem;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    border: 1px solid var(--gold-dim);
+    background: rgba(212,165,72,0.1);
+    color: var(--gold);
+    cursor: pointer;
+    transition: all 0.2s;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .agent-send:hover { background: rgba(212,165,72,0.2); }
+
+  @media (max-width: 480px) {
+    .agent-panel {
+      right: 0.6rem;
+      left: 0.6rem;
+      width: auto;
+      bottom: 4.5rem;
+      max-height: calc(100vh - 6rem);
+    }
+    .agent-toggle { bottom: 1rem; right: 1rem; width: 50px; height: 50px; font-size: 1.3rem; }
+  }
+
+  /* ── pinpin elegant overlay ── */
+  .pinpin-overlay {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.7);
+    z-index: 10000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    backdrop-filter: blur(6px);
+  }
+  .pinpin-overlay.visible { display: flex; animation: overlayFadeIn 0.8s ease; }
+  @keyframes overlayFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  .pinpin-scene {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    position: relative;
+  }
+
+  /* Warm glow behind the dog */
+  .pinpin-glow {
+    position: absolute;
+    width: 180px;
+    height: 180px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(212,165,72,0.1) 0%, transparent 70%);
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    opacity: 0;
+    transition: opacity 1s ease;
+    pointer-events: none;
+  }
+  .pinpin-glow.visible { opacity: 1; animation: glowPulse 4s ease-in-out infinite; }
+  @keyframes glowPulse {
+    0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.4; }
+    50% { transform: translate(-50%, -50%) scale(1.15); opacity: 0.7; }
+  }
+
+  /* The dog — appear with scale pop */
+  .pinpin-dog {
+    width: 80px;
+    height: 80px;
+    opacity: 0;
+    transform: scale(0.5);
+    position: relative;
+    z-index: 1;
+  }
+  .pinpin-dog.animate-in {
+    animation: dogAppear 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  }
+  @keyframes dogAppear {
+    0% { opacity: 0; transform: scale(0.5); }
+    60% { opacity: 1; transform: scale(1.06); }
+    100% { opacity: 1; transform: scale(1); }
+  }
+
+  /* Gentle idle breathing */
+  .pinpin-dog .dog-body { animation: dogBreathe 3s ease-in-out infinite; }
+  @keyframes dogBreathe {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-3px); }
+  }
+
+  /* Tail wag — subtle */
+  .pinpin-dog .dog-tail-elegant {
+    animation: wagTail 0.7s ease-in-out infinite;
+    transform-origin: 74px 68px;
+  }
+
+  /* Speech bubble — clean gradient card */
+  .pinpin-speech {
+    background: linear-gradient(135deg, #1e1e35 0%, #15152a 100%);
+    border: 1px solid rgba(212,165,72,0.2);
+    border-radius: 18px;
+    padding: 1.3rem 1.8rem;
+    max-width: 340px;
+    color: var(--text-primary);
+    font-size: 0.95rem;
+    line-height: 1.8;
+    text-align: center;
+    box-shadow: 0 12px 48px rgba(0,0,0,0.5), 0 0 60px rgba(212,165,72,0.04);
+    position: relative;
+    z-index: 1;
+    opacity: 0;
+    transform: translateY(16px);
+    transition: all 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .pinpin-speech.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  .pinpin-dismiss-hint {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    opacity: 0;
+    transition: opacity 0.8s ease;
+    position: relative;
+    z-index: 1;
+  }
+  .pinpin-dismiss-hint.visible { opacity: 0.5; }
+    color: var(--text-muted);
+    opacity: 0;
+    transition: opacity 0.6s ease;
+    margin-top: 0.3rem;
+  }
+  .pinpin-dismiss-hint.visible {
+    opacity: 0.6;
+  }
+
+  /* ── pinpin loading (in chat) ── */
+  .agent-typing {
+    align-items: center;
+    gap: 0.4rem;
+  }
+  .agent-typing .typing-dog {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    animation: loadingBounce 0.35s ease-in-out infinite;
+  }
+  @keyframes loadingBounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-5px); }
+  }
+  .agent-typing .typing-text {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    animation: typingPulse 1.5s ease-in-out infinite;
+  }
+  @keyframes typingPulse {
+    0%, 100% { opacity: 0.5; }
+    50% { opacity: 1; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <h1><span data-i18n="title-main">四千周</span><small data-i18n="title-small">倒计时</small></h1>
+    <p class="subtitle" data-i18n="subtitle">Four Thousand Weeks</p>
+    <blockquote>
+      <span data-i18n="blockquote-text">"真正的问题不在于我们时间不够，而在于无论如何我们都无法拥有足够的时间——接受这一局限，才是解放的开始。"</span>
+      <cite data-i18n="blockquote-cite">—— 奥利弗·伯克曼《四千周》</cite>
+    </blockquote>
+    <a class="pdf-download" href="Four_Thousand_Weeks.pdf" download target="_blank" data-i18n="pdf-download">📖 下载《Four Thousand Weeks》PDF</a>
+    <div class="lang-toggle" id="lang-toggle">
+      <button class="active" data-lang="zh">中</button>
+      <button data-lang="en">EN</button>
+    </div>
+    <div class="scale-toggle" id="scale-toggle">
+      <button data-scale="sm" data-i18n="scale-sm">小</button>
+      <button class="active" data-scale="md" data-i18n="scale-md">中</button>
+      <button data-scale="lg" data-i18n="scale-lg">大</button>
+    </div>
+  </header>
+
+  <!-- ── stats ── -->
+  <div class="stats">
+    <div class="stat-card primary flip-card" id="remain-card">
+      <div class="flip-inner">
+        <div class="flip-front">
+          <span class="number gold" id="remain-display" aria-live="polite">--</span>
+          <span class="label" data-i18n="stat-remain-label">剩余周数</span>
+          <span class="flip-hint" data-i18n="flip-hint-front">✦ 点击翻看</span>
+        </div>
+        <div class="flip-back">
+          <div class="flip-quote" id="flip-quote-age"></div>
+          <div class="flip-quote flip-quote-remain" id="flip-quote-remain"></div>
+          <span class="flip-hint back" data-i18n="flip-hint-back">✦ 点击返回</span>
+        </div>
+      </div>
+    </div>
+    <div class="stat-card age-card">
+      <span class="number gold" id="age-display">--</span>
+      <span class="label" id="age-subtitle">生于 ----</span>
+    </div>
+    <div class="stat-card ring-card">
+      <svg width="90" height="90" viewBox="0 0 90 90" aria-label="生命进度">
+        <circle cx="45" cy="45" r="36" fill="none" stroke="var(--surface-border)" stroke-width="6"/>
+        <circle cx="45" cy="45" r="36" fill="none" stroke="var(--gold)" stroke-width="6"
+          stroke-linecap="round" stroke-dasharray="226.2" stroke-dashoffset="226.2"
+          transform="rotate(-90 45 45)" id="progress-ring-arc"/>
+        <text x="45" y="45" text-anchor="middle" dominant-baseline="central"
+          fill="var(--gold)" font-size="20" font-weight="700" font-variant-numeric="tabular-nums"
+          id="pct-display">--%</text>
+      </svg>
+      <span class="label" id="lived-display">已用 -- 周</span>
+    </div>
+    <div class="stat-card bar-card">
+      <div class="bar-track">
+        <div class="bar-fill" id="life-progress-fill"></div>
+      </div>
+      <span class="number gold" id="bar-pct-text">--%</span>
+      <span class="label" data-i18n="stat-remain-bottom">剩余时光</span>
+    </div>
+  </div>
+
+  <!-- ── controls ── -->
+  <div class="controls">
+    <div class="control-group">
+      <label data-i18n="control-birth-label">出生日期</label>
+      <div class="birth-selects" id="birth-input">
+        <div class="birth-field">
+          <select id="birth-year"></select>
+          <span class="birth-suffix" data-i18n="suffix-year">年</span>
+        </div>
+        <div class="birth-field">
+          <select id="birth-month"></select>
+          <span class="birth-suffix" data-i18n="suffix-month">月</span>
+        </div>
+        <div class="birth-field">
+          <select id="birth-day"></select>
+          <span class="birth-suffix" data-i18n="suffix-day">日</span>
+        </div>
+      </div>
+    </div>
+    <div class="control-group">
+      <label for="lifespan-slider" data-i18n="control-lifespan-label">预期寿命（岁）</label>
+      <div class="slider-row">
+        <input type="range" id="lifespan-slider" min="1" max="110" value="80" step="1">
+        <span class="slider-value" id="lifespan-display">80 岁</span>
+      </div>
+      <div class="end-date-label"><span data-i18n="control-endpoint-label">时间终点:</span> <span id="end-display">----</span></div>
+    </div>
+  </div>
+  <div class="error-msg hidden" id="error-msg"></div>
+
+  <!-- ── grid ── -->
+  <section class="grid-section" id="grid-section">
+    <div class="view-switcher">
+      <button class="view-btn active" data-view="grid" data-i18n="view-grid">全览</button>
+      <button class="view-btn" data-view="year" data-i18n="view-year">年视图</button>
+      <button class="view-btn" data-view="review" data-i18n="view-review">复盘</button>
+    </div>
+    <div class="grid-header">
+      <span data-i18n="grid-hint">每一格 = 你生命中的一周</span>
+      <div class="legend">
+        <span><span class="legend-dot lived"></span> <span data-i18n="legend-lived">已过</span></span>
+        <span><span class="legend-dot current"></span> <span data-i18n="legend-current">本周</span></span>
+        <span><span class="legend-dot remaining"></span> <span data-i18n="legend-remaining">剩余</span></span>
+      </div>
+    </div>
+    <div class="date-locator">
+      <label data-i18n="locator-label">定位日期:</label>
+      <div class="locator-selects">
+        <div class="locator-field">
+          <select id="locator-year"></select>
+          <span class="locator-suffix" data-i18n="suffix-year">年</span>
+        </div>
+        <div class="locator-field">
+          <select id="locator-month"></select>
+          <span class="locator-suffix" data-i18n="suffix-month">月</span>
+        </div>
+        <div class="locator-field">
+          <select id="locator-day"></select>
+          <span class="locator-suffix" data-i18n="suffix-day">日</span>
+        </div>
+      </div>
+      <button class="date-locator-btn primary" id="locator-this-week" data-i18n="locator-this-week">本周</button>
+      <button class="date-locator-btn" id="locator-goto" data-i18n="locator-goto">定位</button>
+      <button class="date-locator-btn primary" id="locator-jump" data-i18n="locator-jump">跳转记录</button>
+      <button class="date-locator-btn" id="locator-reset" data-i18n="locator-reset">重置</button>
+      <span class="date-locator-info" id="locator-info"></span>
+    </div>
+    <div class="grid-scroll" id="grid-scroll">
+      <div class="week-grid" id="week-grid"></div>
+    </div>
+    <div class="year-view" id="year-view">
+      <div class="year-nav">
+        <button class="year-nav-arrow" id="year-prev">&#8592;</button>
+        <input class="year-nav-label" id="year-nav-label" type="text" value="1990">
+        <button class="year-nav-arrow" id="year-next">&#8594;</button>
+      </div>
+      <div class="year-grid" id="year-grid"></div>
+    </div>
+    <div class="review-view" id="review-view">
+      <div class="review-header">
+        <span style="font-size:0.85rem;color:var(--text-secondary);font-weight:600;" data-i18n="review-header">回顾范围</span>
+        <button class="review-filter-btn active" data-review-range="all" data-i18n="review-all">全部已过</button>
+        <button class="review-filter-btn" data-review-range="year" data-i18n="review-year-btn">按年</button>
+        <button class="review-filter-btn" data-review-range="month" data-i18n="review-month-btn">按月</button>
+        <button class="review-filter-btn" data-review-range="custom" data-i18n="review-custom-btn">自定义</button>
+        <span class="review-picker hidden" id="review-year-picker">
+          <input type="number" id="review-year-input" style="width:80px;font-family:var(--font-ui);font-size:0.82rem;padding:0.25rem 0.4rem;border-radius:6px;border:1px solid var(--surface-border);background:rgba(255,255,255,0.04);color:var(--text-primary);outline:none;" value="2026">
+        </span>
+        <span class="review-picker hidden" id="review-month-picker">
+          <input type="number" id="review-my-year" style="width:70px;font-family:var(--font-ui);font-size:0.82rem;padding:0.25rem 0.4rem;border-radius:6px;border:1px solid var(--surface-border);background:rgba(255,255,255,0.04);color:var(--text-primary);outline:none;" value="2026">
+          <select id="review-month-select" style="font-family:var(--font-ui);font-size:0.82rem;padding:0.25rem 0.4rem;border-radius:6px;border:1px solid var(--surface-border);background:rgba(255,255,255,0.04);color:var(--text-primary);outline:none;">
+          </select>
+        </span>
+      </div>
+      <div class="review-filter-range hidden" id="review-custom-range">
+        <input type="date" id="review-start-date">
+        <span style="color:var(--text-muted);font-size:0.75rem;" data-i18n="review-to">至</span>
+        <input type="date" id="review-end-date">
+        <button class="date-locator-btn primary" id="review-apply-range" data-i18n="review-apply">应用</button>
+      </div>
+      <div class="review-summary" id="review-summary"></div>
+      <div id="review-content"></div>
+    </div>
+  </section>
+
+  <!-- ── teaser quote ── -->
+  <div id="teaser-quote"></div>
+
+  <footer>
+    <span data-i18n="footer-text">基于《四千周》的理念构建 · Oliver Burkeman</span>
+  </footer>
+</div>
+
+<!-- ── AI 助手 ── -->
+<button class="agent-toggle" id="agent-toggle" title="问皮皮">
+  <svg class="dog-icon dog-bounce" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+    <ellipse cx="50" cy="78" rx="26" ry="16" fill="#d4a548"/>
+    <ellipse cx="50" cy="80" rx="14" ry="10" fill="#ede4d3" opacity="0.4"/>
+    <circle cx="50" cy="42" r="25" fill="#d4a548"/>
+    <ellipse cx="50" cy="49" rx="15" ry="12" fill="#f5edd6"/>
+    <ellipse cx="28" cy="48" rx="9" ry="15" fill="#b88930" transform="rotate(-15 28 48)"/>
+    <ellipse cx="72" cy="48" rx="9" ry="15" fill="#b88930" transform="rotate(15 72 48)"/>
+    <g class="dog-tail-group">
+      <path d="M74 68 Q90 55 86 40" fill="none" stroke="#d4a548" stroke-width="5" stroke-linecap="round"/>
+    </g>
+    <circle cx="40" cy="36" r="3" fill="#2a1a0a"/>
+    <circle cx="60" cy="36" r="3" fill="#2a1a0a"/>
+    <circle cx="41.5" cy="34.5" r="1.2" fill="white"/>
+    <circle cx="61.5" cy="34.5" r="1.2" fill="white"/>
+    <ellipse cx="50" cy="45" rx="3.5" ry="2.5" fill="#1a0a00"/>
+    <path d="M46 48 Q50 52 54 48" fill="none" stroke="#1a0a00" stroke-width="1.2"/>
+    <ellipse cx="50" cy="54" rx="3" ry="4.5" fill="#e8685a"/>
+  </svg>
+</button>
+<div class="agent-panel" id="agent-panel">
+  <div class="agent-header">
+    <div class="agent-header-info">
+      <span class="agent-avatar">
+        <svg class="dog-icon dog-bounce" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+          <ellipse cx="50" cy="78" rx="26" ry="16" fill="#d4a548"/>
+          <ellipse cx="50" cy="80" rx="14" ry="10" fill="#ede4d3" opacity="0.4"/>
+          <circle cx="50" cy="42" r="25" fill="#d4a548"/>
+          <ellipse cx="50" cy="49" rx="15" ry="12" fill="#f5edd6"/>
+          <ellipse cx="28" cy="48" rx="9" ry="15" fill="#b88930" transform="rotate(-15 28 48)"/>
+          <ellipse cx="72" cy="48" rx="9" ry="15" fill="#b88930" transform="rotate(15 72 48)"/>
+          <g class="dog-tail-group">
+            <path d="M74 68 Q90 55 86 40" fill="none" stroke="#d4a548" stroke-width="5" stroke-linecap="round"/>
+          </g>
+          <circle cx="40" cy="36" r="3" fill="#2a1a0a"/>
+          <circle cx="60" cy="36" r="3" fill="#2a1a0a"/>
+          <circle cx="41.5" cy="34.5" r="1.2" fill="white"/>
+          <circle cx="61.5" cy="34.5" r="1.2" fill="white"/>
+          <ellipse cx="50" cy="45" rx="3.5" ry="2.5" fill="#1a0a00"/>
+          <path d="M46 48 Q50 52 54 48" fill="none" stroke="#1a0a00" stroke-width="1.2"/>
+          <ellipse cx="50" cy="54" rx="3" ry="4.5" fill="#e8685a"/>
+        </svg>
+      </span>
+      <span class="agent-name" data-i18n="agent-name">皮皮</span>
+      <span class="agent-subtitle" data-i18n="agent-subtitle">你的生命伙伴</span>
+    </div>
+    <button class="agent-header-close" id="agent-close">✕</button>
+  </div>
+  <div class="agent-messages" id="agent-messages"></div>
+  <div class="agent-typing" id="agent-typing">
+    <svg class="typing-dog" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <ellipse cx="50" cy="78" rx="26" ry="16" fill="#d4a548"/>
+      <ellipse cx="50" cy="80" rx="14" ry="10" fill="#ede4d3" opacity="0.4"/>
+      <circle cx="50" cy="42" r="25" fill="#d4a548"/>
+      <ellipse cx="50" cy="49" rx="15" ry="12" fill="#f5edd6"/>
+      <ellipse cx="28" cy="48" rx="9" ry="15" fill="#b88930" transform="rotate(-15 28 48)"/>
+      <ellipse cx="72" cy="48" rx="9" ry="15" fill="#b88930" transform="rotate(15 72 48)"/>
+      <g class="dog-tail-group">
+        <path d="M74 68 Q90 55 86 40" fill="none" stroke="#d4a548" stroke-width="5" stroke-linecap="round"/>
+      </g>
+      <circle cx="40" cy="36" r="3" fill="#2a1a0a"/>
+      <circle cx="60" cy="36" r="3" fill="#2a1a0a"/>
+      <circle cx="41.5" cy="34.5" r="1.2" fill="white"/>
+      <circle cx="61.5" cy="34.5" r="1.2" fill="white"/>
+      <ellipse cx="50" cy="45" rx="3.5" ry="2.5" fill="#1a0a00"/>
+      <path d="M46 48 Q50 52 54 48" fill="none" stroke="#1a0a00" stroke-width="1.2"/>
+      <ellipse cx="50" cy="54" rx="3" ry="4.5" fill="#e8685a"/>
+    </svg>
+    <span class="typing-text" id="typing-text">皮皮正在翻找你的记忆……</span>
+  </div>
+  <div class="agent-input-area">
+    <input class="agent-input" id="agent-input" data-i18n="agent-input-placeholder" data-i18n-type="placeholder" placeholder="问我过去的事..." autocomplete="off">
+    <button class="agent-send" id="agent-send" data-i18n="agent-send">发送</button>
+  </div>
+</div>
+
+<!-- ── pinpin running overlay ── -->
+<div class="pinpin-overlay" id="pinpin-overlay">
+  <div class="pinpin-scene">
+    <div class="pinpin-glow" id="pinpin-glow"></div>
+    <div class="pinpin-dog" id="pinpin-dog">
+      <svg class="dog-body" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" width="80" height="80">
+        <ellipse cx="50" cy="78" rx="26" ry="16" fill="#d4a548"/>
+        <ellipse cx="50" cy="80" rx="14" ry="10" fill="#ede4d3" opacity="0.4"/>
+        <circle cx="50" cy="42" r="25" fill="#d4a548"/>
+        <ellipse cx="50" cy="49" rx="15" ry="12" fill="#f5edd6"/>
+        <ellipse cx="28" cy="48" rx="9" ry="15" fill="#b88930" transform="rotate(-15 28 48)"/>
+        <ellipse cx="72" cy="48" rx="9" ry="15" fill="#b88930" transform="rotate(15 72 48)"/>
+        <g class="dog-tail-elegant">
+          <path d="M74 68 Q90 55 86 40" fill="none" stroke="#d4a548" stroke-width="5" stroke-linecap="round"/>
+        </g>
+        <circle cx="40" cy="36" r="3" fill="#2a1a0a"/>
+        <circle cx="60" cy="36" r="3" fill="#2a1a0a"/>
+        <circle cx="41.5" cy="34.5" r="1.2" fill="white"/>
+        <circle cx="61.5" cy="34.5" r="1.2" fill="white"/>
+        <ellipse cx="50" cy="45" rx="3.5" ry="2.5" fill="#1a0a00"/>
+        <path d="M46 48 Q50 52 54 48" fill="none" stroke="#1a0a00" stroke-width="1.2"/>
+        <ellipse cx="50" cy="54" rx="3" ry="4.5" fill="#e8685a"/>
+      </svg>
+    </div>
+    <div class="pinpin-speech" id="pinpin-speech">
+      <div id="pinpin-speech-text"></div>
+    </div>
+    <div class="pinpin-dismiss-hint" id="pinpin-dismiss-hint" data-i18n="pinpin-dismiss">点击任意处关闭</div>
+  </div>
+</div>
+
+<!-- ── week detail modal ── -->
+<div class="modal-overlay" id="week-modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <span class="modal-week-info" id="modal-week-info">第 -- 周</span>
+      <div style="display:flex;gap:0.3rem;align-items:center">
+        <button class="modal-fullscreen-btn" id="modal-fullscreen" data-i18n-title="modal-fullscreen" title="全屏模式">⛶</button>
+        <button class="modal-close" id="modal-close">&times;</button>
+      </div>
+    </div>
+    <div class="modal-date-range" id="modal-date-range"></div>
+    <div class="modal-timestamp-row" id="modal-timestamp-row">
+      <span class="modal-timestamp-label" id="modal-timestamp-label"></span>
+      <div style="display:flex;gap:0.4rem;align-items:center;flex-wrap:wrap;">
+        <label class="auto-ts-toggle" id="auto-ts-label" title="每次保存自动更新编辑时间">
+          <input type="checkbox" id="auto-ts-check" checked>
+          <span data-i18n="auto-ts-label">⏱ 自动</span>
+        </label>
+        <button class="modal-timestamp-btn" id="modal-timestamp-insert" style="display:none" data-i18n="modal-insert-timestamp">+ 插入时间</button>
+      </div>
+    </div>
+    <div class="modal-body">
+      <div class="fmt-toolbar" id="fmt-toolbar">
+        <button class="fmt-btn fmt-bold" data-cmd="bold" title="粗体 (Ctrl+B)"><b>B</b></button>
+        <button class="fmt-btn fmt-underline" data-cmd="underline" title="下划线 (Ctrl+U)"><u>U</u></button>
+        <button class="fmt-btn fmt-highlight" data-cmd="hilite" title="高亮 (Ctrl+H)"><span class="hl-icon">A</span></button>
+        <span class="fmt-separator"></span>
+        <select class="fmt-fontsize" id="fmt-fontsize" title="字体大小">
+          <option value="8">8</option>
+          <option value="9">9</option>
+          <option value="10">10</option>
+          <option value="11">11</option>
+          <option value="12" selected>12</option>
+          <option value="14">14</option>
+          <option value="16">16</option>
+          <option value="18">18</option>
+          <option value="20">20</option>
+          <option value="22">22</option>
+          <option value="24">24</option>
+          <option value="26">26</option>
+          <option value="28">28</option>
+          <option value="36">36</option>
+          <option value="42">42</option>
+          <option value="48">48</option>
+          <option value="72">72</option>
+        </select>
+      </div>
+      <div class="modal-textarea" id="modal-text" contenteditable="true" data-i18n="modal-placeholder" data-i18n-type="placeholder" data-placeholder="记录这一周的回忆…
+
+文字、图片、音频、视频都可以。
+这是你生命中独一无二的一周。"></div>
+      <div class="media-grid" id="media-grid"></div>
+      <div class="modal-drop-hint" id="modal-drop-hint" data-i18n="modal-drop-hint">📋 可粘贴图片或拖拽文件到此处</div>
+      <div class="modal-dropzone-overlay" id="modal-dropzone">
+        <div class="drop-icon">📁</div>
+        <div data-i18n="modal-drop-here">松开以添加文件</div>
+      </div>
+    </div>
+    <div class="modal-status" id="modal-status"></div>
+    <div class="modal-footer">
+      <label class="modal-upload-btn" data-i18n="modal-upload-image">&#128247; 图片
+        <input type="file" accept="image/*" multiple id="file-image">
+      </label>
+      <label class="modal-upload-btn" data-i18n="modal-upload-audio">&#127925; 音频
+        <input type="file" accept="audio/*" id="file-audio">
+      </label>
+      <label class="modal-upload-btn" data-i18n="modal-upload-video">&#127916; 视频
+        <input type="file" accept="video/*" id="file-video">
+      </label>
+      <label class="modal-upload-btn" data-i18n="modal-upload-file">&#128196; 文件
+        <input type="file" multiple id="file-document">
+      </label>
+      <button class="modal-share-btn" id="modal-share" data-i18n="modal-share" data-i18n-title="modal-share-title">分享</button>
+      <button class="modal-save-btn" id="modal-save" data-i18n="modal-save">保存</button>
+    </div>
+    <div class="share-copied-toast" id="share-toast"></div>
+  </div>
+</div>
+
+<script src="皮皮语料库.js"></script>
+<script>
+(function() {
+  'use strict';
+
+  const WEEKS_PER_YEAR = 365.25 / 7;
+
+  // ── DOM refs ──
+  const $ = id => document.getElementById(id);
+  const birthInput       = $('birth-input');
+  const birthYearSelect  = $('birth-year');
+  const birthMonthSelect = $('birth-month');
+  const birthDaySelect   = $('birth-day');
+  const lifespanSlider   = $('lifespan-slider');
+  const lifespanDisplay  = $('lifespan-display');
+  const remainDisplay    = $('remain-display');
+  const livedDisplay     = $('lived-display');
+  const pctDisplay       = $('pct-display');
+  const ageDisplay       = $('age-display');
+  const endDisplay       = $('end-display');
+  const weekGrid         = $('week-grid');
+  const gridScroll       = $('grid-scroll');
+  const errorMsg         = $('error-msg');
+  const remainCard       = $('remain-card');
+  const flipQuoteAge     = $('flip-quote-age');
+  const flipQuoteRemain  = $('flip-quote-remain');
+  const teaserQuote      = $('teaser-quote');
+  const ringArc          = $('progress-ring-arc');
+  const lifeProgressFill = $('life-progress-fill');
+  const barPctText       = $('bar-pct-text');
+  const ageSubtitle      = $('age-subtitle');
+  const locatorYearSelect  = $('locator-year');
+  const locatorMonthSelect = $('locator-month');
+  const locatorDaySelect   = $('locator-day');
+  const locatorInfo        = $('locator-info');
+
+  // ── translations ──
+  var _lang = localStorage.getItem('fwt_lang') || 'zh';
+
+  var translations = {
+    zh: {
+      'title-main': '四千周',
+      'title-small': '倒计时',
+      'subtitle': 'Four Thousand Weeks',
+      'blockquote-text': '"真正的问题不在于我们时间不够，而在于无论如何我们都无法拥有足够的时间——接受这一局限，才是解放的开始。"',
+      'blockquote-cite': '—— 奥利弗·伯克曼《四千周》',
+      'pdf-download': '📖 下载《Four Thousand Weeks》PDF',
+      'stat-remain-label': '剩余周数',
+      'stat-remain-bottom': '剩余时光',
+      'stat-age-label': '生于',
+      'stat-ring-label': '已用',
+      'flip-hint-front': '✦ 点击翻看',
+      'flip-hint-back': '✦ 点击返回',
+      'scale-sm': '小',
+      'scale-md': '中',
+      'scale-lg': '大',
+      'control-birth-label': '出生日期',
+      'control-lifespan-label': '预期寿命（岁）',
+      'control-endpoint-label': '时间终点:',
+      'suffix-year': '年',
+      'suffix-month': '月',
+      'suffix-day': '日',
+      'view-grid': '全览',
+      'view-year': '年视图',
+      'view-review': '复盘',
+      'grid-hint': '每一格 = 你生命中的一周',
+      'legend-lived': '已过',
+      'legend-current': '本周',
+      'legend-remaining': '剩余',
+      'locator-label': '定位日期:',
+      'locator-this-week': '本周',
+      'locator-goto': '定位',
+      'locator-jump': '跳转记录',
+      'locator-reset': '重置',
+      'review-header': '回顾范围',
+      'review-all': '全部已过',
+      'review-year-btn': '按年',
+      'review-month-btn': '按月',
+      'review-custom-btn': '自定义',
+      'review-to': '至',
+      'review-apply': '应用',
+      'modal-fullscreen': '全屏模式',
+      'modal-upload-image': '图片',
+      'modal-upload-audio': '音频',
+      'modal-upload-video': '视频',
+      'modal-upload-file': '文件',
+      'modal-drop-hint': '📋 可粘贴图片或拖拽文件到此处',
+      'modal-drop-here': '松开以添加文件',
+      'modal-share': '分享',
+      'modal-share-title': '分享这条记录',
+      'share-copied': '已复制到剪贴板 ✓',
+      'share-agent': '分享这条回复',
+      'auto-saved': '已自动保存',
+      'modal-save': '保存',
+      'agent-name': '皮皮',
+      'agent-subtitle': '你的生命伙伴',
+      'agent-input-placeholder': '问我过去的事...',
+      'agent-send': '发送',
+      'pinpin-dismiss': '点击任意处关闭',
+      'footer-text': '基于《四千周》的理念构建 · Oliver Burkeman',
+      // Months
+      months: ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'],
+      // Agent hint when query not understood
+      'agent-hint': '我不太确定你问的是什么🤔\n\n你可以试试这样问我：\n• "去年一月我在干什么"\n• "第100周"\n• "2024年夏天"\n• "最近一个月"\n• "全部记录"',
+      // Error messages
+      'err-future-birth': '出生日期不能在未来',
+      'err-no-entries': '该范围内没有已过的周数',
+      'err-load-failed': '加载失败，请重试',
+      'err-out-of-range': '日期超出生命范围',
+      'err-agent-read': '抱歉，读取记录时出了点小问题，请稍后再试。🐾',
+      // Review
+      'review-all-label': '全部已过 · 共',
+      'review-weeks': '周',
+      'review-records': '条记录',
+      'review-empty': '该时间段内还没有记录\n点击某个周方块开始记录你的生活吧',
+      'review-no-range': '该范围内没有已过的周数',
+      'week-label': '第',
+      'week-label-en': 'Week',
+      'week-of': '周',
+      'year-of': '年',
+      'about': '约',
+      'years-old': '岁',
+      'months-old': '个月',
+      'start-from': '起',
+      // Modal
+      'modal-placeholder': '记录这一周的回忆…\n\n文字、图片、音频、视频都可以。\n这是你生命中独一无二的一周。',
+      'modal-timestamp-label': '最后编辑:',
+      'modal-insert-timestamp': '+ 插入时间',
+      'auto-ts-label': '⏱ 自动',
+    },
+    en: {
+      'title-main': 'Four Thousand Weeks',
+      'title-small': 'Life Countdown',
+      'subtitle': '四千周',
+      'blockquote-text': '"The real problem is not that we don\'t have enough time. The real problem is that we can\'t have enough time — and accepting that limitation is the beginning of liberation."',
+      'blockquote-cite': '— Oliver Burkeman, "Four Thousand Weeks"',
+      'pdf-download': '📖 Download "Four Thousand Weeks" PDF',
+      'stat-remain-label': 'Weeks Left',
+      'stat-remain-bottom': 'Remaining',
+      'stat-age-label': 'Born',
+      'stat-ring-label': 'Used',
+      'flip-hint-front': '✦ Click to flip',
+      'flip-hint-back': '✦ Click to return',
+      'scale-sm': 'S',
+      'scale-md': 'M',
+      'scale-lg': 'L',
+      'control-birth-label': 'Birth Date',
+      'control-lifespan-label': 'Life Expectancy (years)',
+      'control-endpoint-label': 'End Date:',
+      'suffix-year': '',
+      'suffix-month': '',
+      'suffix-day': '',
+      'view-grid': 'Grid',
+      'view-year': 'Year',
+      'view-review': 'Review',
+      'grid-hint': 'Each square = one week of your life',
+      'legend-lived': 'Lived',
+      'legend-current': 'This Week',
+      'legend-remaining': 'Remaining',
+      'locator-label': 'Go to date:',
+      'locator-this-week': 'This Week',
+      'locator-goto': 'Locate',
+      'locator-jump': 'Open Entry',
+      'locator-reset': 'Reset',
+      'review-header': 'Review Range',
+      'review-all': 'All Lived',
+      'review-year-btn': 'By Year',
+      'review-month-btn': 'By Month',
+      'review-custom-btn': 'Custom',
+      'review-to': 'to',
+      'review-apply': 'Apply',
+      'modal-fullscreen': 'Fullscreen',
+      'modal-upload-image': 'Image',
+      'modal-upload-audio': 'Audio',
+      'modal-upload-video': 'Video',
+      'modal-upload-file': 'File',
+      'modal-drop-hint': '📋 Paste images or drag files here',
+      'modal-drop-here': 'Drop files here',
+      'modal-share': 'Share',
+      'modal-share-title': 'Share this entry',
+      'share-copied': 'Copied to clipboard ✓',
+      'share-agent': 'Share this reply',
+      'auto-saved': 'Auto saved',
+      'modal-save': 'Save',
+      'agent-name': 'Pinpin',
+      'agent-subtitle': 'Your Life Companion',
+      'agent-input-placeholder': 'Ask me about the past...',
+      'agent-send': 'Send',
+      'pinpin-dismiss': 'Click anywhere to close',
+      'footer-text': 'Built on the philosophy of "Four Thousand Weeks" · Oliver Burkeman',
+      months: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],
+      'agent-hint': 'I\'m not sure what you\'re asking 🤔\n\nTry asking:\n• "What was I doing last January?"\n• "Week 100"\n• "Summer 2024"\n• "Last month"\n• "All records"',
+      'err-future-birth': 'Birth date cannot be in the future',
+      'err-no-entries': 'No weeks have passed in this range',
+      'err-load-failed': 'Failed to load, please try again',
+      'err-out-of-range': 'Date is outside your life range',
+      'err-agent-read': 'Sorry, I had trouble reading your records. Please try again. 🐾',
+      'review-all-label': 'All Lived ·',
+      'review-weeks': 'weeks',
+      'review-records': 'entries',
+      'review-empty': 'No entries yet for this period.\nClick a week square to start recording.',
+      'review-no-range': 'No weeks have passed in this range',
+      'week-label': 'Week',
+      'week-label-en': 'Week',
+      'week-of': '',
+      'year-of': '',
+      'about': 'about',
+      'years-old': 'years old',
+      'months-old': 'months old',
+      'start-from': '',
+      'modal-placeholder': 'Record your memories of this week…\n\nText, images, audio, and video are all welcome.\nThis is a unique week of your life.',
+      'modal-timestamp-label': 'Last edited:',
+      'modal-insert-timestamp': '+ Insert TS',
+      'auto-ts-label': '⏱ Auto',
+    }
+  };
+
+  function t(key) {
+    return (translations[_lang] && translations[_lang][key] !== undefined) ? translations[_lang][key] : key;
+  }
+
+  function getLang() { return _lang; }
+  function setLang(l) {
+    if (l !== 'zh' && l !== 'en') return;
+    _lang = l;
+    localStorage.setItem('fwt_lang', l);
+    applyLanguage();
+    rebuild();
+  }
+
+  function populateMonthSelects() {
+    // Populate review month select
+    var sel = document.getElementById('review-month-select');
+    if (sel) {
+      var currentVal = sel.value;
+      sel.innerHTML = '';
+      var months = t('months');
+      for (var mi = 0; mi < 12; mi++) {
+        var opt = document.createElement('option');
+        opt.value = String(mi);
+        opt.textContent = months[mi];
+        sel.appendChild(opt);
+      }
+      if (currentVal) sel.value = currentVal;
+    }
+  }
+
+  function applyLanguage() {
+    // Update all data-i18n elements
+    document.querySelectorAll('[data-i18n]').forEach(function(el) {
+      var key = el.dataset.i18n;
+      var val = t(key);
+      if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
+        if (el.dataset.i18nType === 'placeholder') {
+          el.placeholder = val;
+        } else {
+          el.value = val;
+        }
+      } else if (el.tagName === 'LABEL') {
+        // Preserve child elements (e.g. <input type="file"> inside label)
+        // Only update the text portion by replacing child text nodes
+        var childTextNodes = [];
+        for (var ci = 0; ci < el.childNodes.length; ci++) {
+          if (el.childNodes[ci].nodeType === Node.TEXT_NODE) {
+            childTextNodes.push(el.childNodes[ci]);
+          }
+        }
+        if (childTextNodes.length > 0) {
+          // Replace the first text node with the translated text, remove others
+          childTextNodes[0].textContent = val;
+          for (var ti = 1; ti < childTextNodes.length; ti++) {
+            childTextNodes[ti].remove();
+          }
+        } else {
+          el.textContent = val;
+        }
+      } else if (el.hasAttribute('contenteditable') && el.dataset.i18nType === 'placeholder') {
+        // Contenteditable div: update data-placeholder for :empty::before
+        el.dataset.placeholder = val;
+      } else {
+        el.textContent = val;
+      }
+    });
+
+    // Update data-i18n-title attributes (tooltips)
+    document.querySelectorAll('[data-i18n-title]').forEach(function(el) {
+      var key = el.dataset.i18nTitle;
+      el.title = t(key);
+    });
+
+    // Update month selects
+    populateMonthSelects();
+
+    // Update lifespan display label
+    lifespanDisplay.textContent = parseInt(lifespanSlider.value) + ' ' + t('years-old');
+
+    // HTML lang attribute
+    document.documentElement.lang = (_lang === 'en') ? 'en' : 'zh-CN';
+
+    // Update lang toggle buttons
+    document.querySelectorAll('#lang-toggle button').forEach(function(btn) {
+      btn.classList.toggle('active', btn.dataset.lang === _lang);
+    });
+  }
+
+  // ── state ──
+  let birthDate = localStorage.getItem('fwt_birth') || '1990-01-01';
+  let lifespan  = parseInt(localStorage.getItem('fwt_lifespan')) || 80;
+
+  // ── populate birth selects ──
+  function getDaysInMonth(year, month) {
+    return new Date(year, month, 0).getDate();
+  }
+  function populateSelect(sel, min, max) {
+    sel.innerHTML = '';
+    for (let i = min; i <= max; i++) {
+      const opt = document.createElement('option');
+      opt.value = String(i);
+      opt.textContent = String(i);
+      sel.appendChild(opt);
+    }
+  }
+  function updateDayOptions() {
+    const year = parseInt(birthYearSelect.value) || 2000;
+    const month = parseInt(birthMonthSelect.value) || 1;
+    const maxDay  = getDaysInMonth(year, month);
+    const prevDay = parseInt(birthDaySelect.value);
+    populateSelect(birthDaySelect, 1, maxDay);
+    if (prevDay && prevDay <= maxDay) {
+      birthDaySelect.value = String(prevDay);
+    } else if (prevDay) {
+      birthDaySelect.value = String(maxDay);
+    }
+  }
+  function updateLocatorDayOptions() {
+    const year = parseInt(locatorYearSelect.value) || 2000;
+    const month = parseInt(locatorMonthSelect.value) || 1;
+    const maxDay = getDaysInMonth(year, month);
+    const prevDay = parseInt(locatorDaySelect.value);
+    populateSelect(locatorDaySelect, 1, maxDay);
+    if (prevDay && prevDay <= maxDay) {
+      locatorDaySelect.value = String(prevDay);
+    } else if (prevDay) {
+      locatorDaySelect.value = String(maxDay);
+    }
+  }
+  function getLocatorMaxYear() {
+    const birthY = parseInt(birthDate.split('-')[0]);
+    return birthY + Math.max(lifespan, 110) + 5;
+  }
+  function populateLocatorSelects() {
+    const minYear = parseInt(birthDate.split('-')[0]);
+    const maxYear = getLocatorMaxYear();
+    populateSelect(locatorYearSelect, minYear, maxYear);
+    populateSelect(locatorMonthSelect, 1, 12);
+    updateLocatorDayOptions();
+    const now = new Date();
+    locatorYearSelect.value = String(now.getFullYear());
+    locatorMonthSelect.value = String(now.getMonth() + 1);
+    updateLocatorDayOptions();
+    locatorDaySelect.value = String(now.getDate());
+  }
+  function getLocatorDateStr() {
+    const y = locatorYearSelect.value;
+    if (!y) return null;
+    const m = String(parseInt(locatorMonthSelect.value)).padStart(2, '0');
+    const d = String(parseInt(locatorDaySelect.value)).padStart(2, '0');
+    return y + '-' + m + '-' + d;
+  }
+  function populateBirthSelects() {
+    const now = new Date();
+    populateSelect(birthYearSelect, 1900, now.getFullYear());
+    populateSelect(birthMonthSelect, 1, 12);
+  }
+  function setBirthSelects(dateStr) {
+    const parts = dateStr.split('-');
+    if (parts.length === 3) {
+      const y = parseInt(parts[0], 10);
+      const m = parseInt(parts[1], 10);
+      const d = parseInt(parts[2], 10);
+      birthYearSelect.value = String(y);
+      birthMonthSelect.value = String(m);
+      updateDayOptions();
+      const maxDay = getDaysInMonth(y, m);
+      birthDaySelect.value = String(Math.min(d, maxDay));
+    }
+  }
+  function getBirthValue() {
+    const y = birthYearSelect.value;
+    const m = String(parseInt(birthMonthSelect.value)).padStart(2, '0');
+    const d = String(parseInt(birthDaySelect.value)).padStart(2, '0');
+    if (!y || !m || !d) return null;
+    return y + '-' + m + '-' + d;
+  }
+
+  populateBirthSelects();
+  setBirthSelects(birthDate);
+  lifespanSlider.value = lifespan;
+  lifespanDisplay.textContent = lifespan + ' ' + t('years-old');
+  populateLocatorSelects();
+  populateMonthSelects();
+  applyLanguage();
+
+  // ── helpers ──
+  function parseDate(str) {
+    const d = new Date(str + 'T00:00:00');
+    if (isNaN(d.getTime())) return null;
+    return d;
+  }
+
+  // ── age-adaptive quotes (every 5 years) ──
+  const quotes = [
+    { maxAge: 5,  text: '你还不知道什么叫"时间不够"。每一次日落都新鲜，每一颗糖都值得全力奔赴——这才是最纯粹活在当下的样子。' },
+    { maxAge: 10, text: '世界是一本刚翻开的书。好奇心不需要理由，也不需要效率——它本身就是最好的指南针。' },
+    { maxAge: 15, text: '你第一次感觉到：成为某个人，也意味着不能成为其他所有人。这就是"选择"的起点——虽然沉重，但它让你真正开始属于自己。' },
+    { maxAge: 20, text: '青春最妙的就是那股"用不完"的错觉——去疯，去试，去撞南墙。你不需要急着找到答案，认真问对问题就够了。' },
+    { maxAge: 25, text: '你站在无数可能性的岔路口。这不是焦虑的理由——这是自由在敲门。别急着"搞定"人生，先问问自己：我真正在意的是什么？' },
+    { maxAge: 30, text: '效率陷阱悄悄逼近——你开始以为"做得更多"就能"活得更够"。但人生不是一张待办清单。慢下来，这不叫落后。' },
+    { maxAge: 35, text: '你开始看清自己不是超人。这不是失败——是清醒的开始。你可以诚实地问：什么值得我把仅有一次的时间给它？' },
+    { maxAge: 40, text: '中年不是危机，是解脱。你终于不需要向任何人证明什么。选择放弃一些事，不是因为你做不到，而是因为你终于知道什么更值得。' },
+    { maxAge: 45, text: '做不完所有的事——这不是缺憾，是自由。"决定"在拉丁语里就是"切断"的意思。每一次选择，都是一次真诚的告别——也是一种清醒的抵达。' },
+    { maxAge: 50, text: '宇宙不在乎你如何度过这一生——这不是虚无，是解放。你不需要活得惊天动地。你只需要活得是自己。' },
+    { maxAge: 55, text: '你注意什么，你的世界就是什么。到了这个年纪，你终于可以不再为别人的期待而活——把注意力还给真正属于你的事物。' },
+    { maxAge: 60, text: '你开始看到一生的轮廓。年轻时的狂妄和中年的沉稳，都是你的——它们不是对立的阶段，是同一段生命的不同声部，合在一起才完整。' },
+    { maxAge: 65, text: '你不再需要追赶什么。这不是放弃，是更深层的接纳：生命不是一场竞赛，而是一段独一无二的旅程——每一步都算数。' },
+    { maxAge: 70, text: '你拥有的时间变少了，但每一刻的密度变大了。一次日落，一通电话，一杯热茶——它们不再是"日常"，而是礼物。这是年龄悄悄塞给你的财富。' },
+    { maxAge: 75, text: '你不需要征服时间，也不需要管理时间。你只需要接受它的有限——然后发现，恰恰是这种有限，给了每一件事无法取代的分量。' },
+    { maxAge: 80, text: '回头看你走过的路——那些让你骄傲的，让你遗憾的，让你深爱的——它们加起来，就是你完整的一生。不多不少，恰好是你需要的。' },
+    { maxAge: 85, text: '你不需要再"成为"什么人了。你已经是你。存在的本身——你的呼吸，你的回忆，你在这一刻的感受——就是全部意义。' },
+    { maxAge: 90, text: '你不是在"使用"时间——你就是时间本身。每一个活过的瞬间都不是通往未来的彩排。这一刻，就是你的一生。' },
+    { maxAge: 95, text: '走了这么远，你终于明白：最平凡的瞬间最珍贵。一杯茶的温度，一次散步，一个名字被提起——你不再寻找意义，因为意义一直都在这里。' },
+    { maxAge: 100, text: '重要的不是活了多久，而是是否真正地活过。而你已经做到了——用你的方式，完整地。' },
+    { maxAge: Infinity, text: '你的一生，完整地属于你。每一次选择，每一次爱，每一次失去——它们不是时间的流逝，而是时间的结晶。你不再需要更多时间了——你拥有的就是全部。' },
+  ];
+
+  const quotes_en = [
+    { maxAge: 5,  text: "You haven't yet learned that time is scarce — and that's exactly as it should be. Every sunset is still a marvel, every piece of candy worth a sprint. This is what it means to live fully in the moment, before you even know what a moment is." },
+    { maxAge: 10, text: "The world is a book you've only just opened. Curiosity doesn't need a reason, and it certainly doesn't need to be productive. It is its own justification." },
+    { maxAge: 15, text: "You're discovering for the first time that becoming someone means not becoming everyone else. This is where choice reveals its double edge — and its dignity." },
+    { maxAge: 20, text: "Youth's great gift is the illusion of limitlessness — go ahead and crash into things. You don't need to have the answers yet. Asking the right questions is already enough." },
+    { maxAge: 25, text: "You stand at a crossroads of endless possibility. Don't mistake this for anxiety — it's freedom, knocking. Resist the urge to 'sort your life out.' Ask instead: what do I actually care about?" },
+    { maxAge: 30, text: "The productivity trap is starting to close around you. You've begun to believe that doing more means living more. But your life is not a to-do list. Slow down — this isn't falling behind." },
+    { maxAge: 35, text: "You're starting to realize you can't do it all. This isn't failure — it's the beginning of wisdom. Now you can ask, honestly: what is worthy of the only life I have?" },
+    { maxAge: 40, text: "Midlife isn't a crisis — it's relief. You no longer have to prove anything to anyone. Letting go of certain things isn't giving up; it's finally understanding what actually matters." },
+    { maxAge: 45, text: "The fact that you can't get everything done isn't a shortcoming — it's a liberation. The Latin root of 'decide' means 'to cut off.' Every real choice is a kind of amputation — and a kind of clarity." },
+    { maxAge: 50, text: "The universe doesn't care how you spend your time. That's not nihilism — that's freedom. You don't need to live an extraordinary life. You just need to live your life." },
+    { maxAge: 55, text: "What you pay attention to is what your life amounts to. By now, you can finally stop living for the approval of others — and return your attention to what is genuinely yours." },
+    { maxAge: 60, text: "You can see the shape of a whole life now. The recklessness of youth and the steadiness of middle age aren't opposing forces — they're different movements of the same piece. Neither makes sense without the other." },
+    { maxAge: 65, text: "You've stopped chasing. Not because you've given up, but because you've understood something deeper: a life is not a race. It's a journey with its own pace, and every step belongs to it." },
+    { maxAge: 70, text: "You have less time ahead, but somehow each moment holds more. A sunset, a phone call, a cup of tea — they've stopped being routine and become what they always were: gifts." },
+    { maxAge: 75, text: "You don't need to manage time anymore, or conquer it. You only need to accept that it runs out — and that this very finitude is what gives everything its weight." },
+    { maxAge: 80, text: "Look back at what you've lived — the pride, the regret, the love. All of it belongs to the same life. Not too much, not too little. Exactly what you needed." },
+    { maxAge: 85, text: "You no longer need to become anyone else. You already are who you are. Existence itself — the breath moving through you, the memories you carry, the warmth of this moment — that is the whole of meaning." },
+    { maxAge: 90, text: "You are not 'using' time. You are time. Every moment you've lived was not a rehearsal. This moment is your life, not a preparation for it." },
+    { maxAge: 95, text: "You've come far enough to see it clearly: the ordinary things were always the most precious. A warm cup, a slow walk, a name spoken with care. You stopped searching for meaning because you realized it had been here all along." },
+    { maxAge: 100, text: "The question was never how long you lived — it was whether you really lived. And you did. In your own way. Completely." },
+    { maxAge: Infinity, text: "Your life — all of it — belongs to you. Every choice, every love, every loss. They were never time passing; they were time taking shape. You don't need more time. What you have is already everything." },
+  ];
+
+  // ── remaining-weeks adaptive quotes ──
+  const remainQuotes = [
+    { minWeeks: 2000, text: '还有两千多周。别急着赶路——时间不是用来征服的，是用来经历的。此刻的充裕本身，就是一份礼物。' },
+    { minWeeks: 1500, text: '余下一千五百周。你做不完所有想做的事——承认这一点，不是放弃，是松一口气。你终于可以只做真正重要的了。' },
+    { minWeeks: 1000, text: '一千周。十年。你还来得及学会一门真正喜欢的东西，去一个陌生的地方重新开始，或者认认真真爱一个人——不是因为你"应该"，而是因为你"选择"。' },
+    { minWeeks: 750,  text: '七百五十周。你开始感觉到时间的重量——这不是压力，是深度。每个选择都更清晰了，因为你已经不再骗自己说"以后再说"。' },
+    { minWeeks: 500,  text: '五百周。你心里一直知道那件真正重要的事是什么——不是别人告诉你的，是你自己知道的。去做它，哪怕做得不完美。' },
+    { minWeeks: 400,  text: '四百周。人生下半场不是要你加速，而是要你调转方向——从追逐外部的声音，转向倾听内心的回响。' },
+    { minWeeks: 300,  text: '三百周。六年。时间不可以被"拥有"，只可以被"经历"。你已经足够清醒地知道这一点了。' },
+    { minWeeks: 200,  text: '两百周。每一次"决定"都是一次"切断"——但每一次切断，都让你离自己更近一步。' },
+    { minWeeks: 100,  text: '一百周。如果你只能再过这两年，你会怎么过？不用回答我——回答你自己。那个答案，就是你此刻最真实的路标。' },
+    { minWeeks: 50,   text: '五十周。一年。不是所有事情都需要有"结果"——陪伴本身，注视本身，呼吸本身。它们就是目的。' },
+    { minWeeks: 25,   text: '二十五周。不重要的正在脱落——留下来的，都是你真正在乎的。这是一种奇妙的轻盈。' },
+    { minWeeks: 10,   text: '十周。两个半月。如果只能用这段时间做一件事——那件事就是你此刻最真实的答案。不需要对任何人交代。' },
+    { minWeeks: 5,    text: '五周。每一天都变得不同。你不再为小事烦恼——不是因为你刻意忽略，而是因为你终于看到了什么才是真正重要的。' },
+    { minWeeks: 1,    text: '一周。七天。你不再思考未来——你只感受现在。这是时间最后的馈赠：绝对当下的清明。' },
+    { minWeeks: 0,    text: '时间用完了吗？在另一种意义上，你拥有了全部——因为此刻，就是你的一切。' },
+  ];
+
+  const remainQuotes_en = [
+    { minWeeks: 2000, text: "More than two thousand weeks left. Don't rush to fill them — time isn't something to be conquered, it's something to be lived. The abundance you feel right now is itself a gift." },
+    { minWeeks: 1500, text: "Fifteen hundred weeks. You won't do everything you'd hoped — and admitting that isn't resignation, it's relief. Now you can focus on what actually matters." },
+    { minWeeks: 1000, text: "A thousand weeks. Ten years. You still have time to learn something you love, start over somewhere new, or love someone fully — not because you should, but because you choose to." },
+    { minWeeks: 750,  text: "Seven hundred fifty weeks. You can feel time's weight now — not as pressure, but as depth. Your choices grow clearer because you've finally stopped telling yourself 'someday.'" },
+    { minWeeks: 500,  text: "Five hundred weeks. You've always known, somewhere underneath everything, what truly matters to you. Not what others told you should matter. That thing. Go do it, even if you do it badly." },
+    { minWeeks: 400,  text: "Four hundred weeks. The second half of life isn't about acceleration — it's about turning inward. From chasing what the world wants, to listening to what you want." },
+    { minWeeks: 300,  text: "Three hundred weeks. Six years. Time can't be owned, only experienced. And you already know this in your bones." },
+    { minWeeks: 200,  text: "Two hundred weeks. Every real decision is also a rejection. But every rejection clears space — and brings you closer to yourself." },
+    { minWeeks: 100,  text: "One hundred weeks. If this were all you had left, how would you spend it? Don't answer me. Answer yourself. That answer is the truest compass you'll ever have." },
+    { minWeeks: 50,   text: "Fifty weeks. A year. Not everything needs a result. Presence itself, attention itself, the simple act of breathing — these are not means to an end. They are the end." },
+    { minWeeks: 25,   text: "Twenty-five weeks. The unimportant is falling away on its own. What remains — that's what you genuinely care about. There's an unexpected lightness in this." },
+    { minWeeks: 10,   text: "Ten weeks. Two and a half months. If you could do only one thing with this time, what would it be? That one thing is your answer. You don't need to justify it to a soul." },
+    { minWeeks: 5,    text: "Five weeks. Each day feels different now. You've stopped worrying about small things — not through effort, but because you can finally see what is and isn't important." },
+    { minWeeks: 1,    text: "One week. Seven days. You've stopped thinking about the future and started living in the present. This is time's last gift: the absolute clarity of now." },
+    { minWeeks: 0,    text: "Is time up? In another sense, you have everything. Because this moment — right here — is all there ever was." },
+  ];
+
+  // ── random encouraging humanistic statements ──
+  const encouragements = [
+    '年轻时的狂妄和中年的沉稳都是属于我的——我不害怕老去，因为每一个阶段的我都真实地活过。',
+    '时间不是敌人。它只是把我从一个版本的我，带到了另一个版本的我。每一个版本都有它自己的光芒。',
+    '我二十岁的勇敢和六十岁的平静是同一股力量——只是换了种方式陪我走不同的路。',
+    '你年轻时想改变世界，中年时想改变自己，后来发现——认真地活过，就已经改变了世界一点点。',
+    '每一根白发都是你认真活过的证据。不是衰老的标记，是里程的勋章。',
+    '怕的不是变老，怕的是从未真正年轻过。而你——你一直都年轻，只是年轻的方式在生长。',
+    '青春是天赋，年龄是作品。你的一生，就是你这辈子最了不起的创作。',
+    '不用害怕时间走得太快——你要做的不是跑得更快，而是让时间在你身上留下深浅合适的痕迹。',
+    '生命的长度不由我们决定，但生命的深度由我们每一刻的选择来挖掘。',
+    '你不需要征服时间。你只需要在它流过的声音里，找到自己的节奏——快也好慢也好，你的节奏就是对的。',
+    '每一个今天，都是你曾经以为的"未来"——而你此刻就好好地在这里。你已经做到了。',
+    '接受有限，不是放弃可能性，而是让现有的可能性变得真实而珍贵。',
+    '最深的安慰不是"你还有大把时间"，而是"你拥有的时间，已经足够你过好这一生"——不多不少，刚好是你需要的。',
+    '你不必活得完美。你只需要活得真实。真实本身，就已经足够动人。',
+    '人生不是马拉松，也不是 sprint——它是你自己的散步。快一点慢一点都行，只要你还在路上。',
+    '有些事不是因为你做得好才值得做——而是因为它们本身就是值得的。比如爱，比如陪伴，比如好好吃一顿饭。',
+    '你不需要在每个领域都发光。找到一两件让你觉得"这就是我"的事，然后安心地把它做好——这就够了。',
+  ];
+
+  const encouragements_en = [
+    'The recklessness of youth and the steadiness of middle age are both part of me. I don\'t fear growing older — every version of me has been real.',
+    'Time isn\'t an enemy. It simply moves me from one version of myself to the next. And each version has its own kind of light.',
+    'The courage I had at twenty and the peace I have at sixty are the same thing — just expressing itself differently along the way.',
+    'You wanted to change the world when you were young, then to change yourself when you were older. And eventually you realized: living fully has already changed the world, if only a little.',
+    'Every gray hair is evidence of a life actually lived. Not a mark of decay — a medal.',
+    'The real fear isn\'t growing old — it\'s never having been fully alive. And you have been. You still are.',
+    'Youth is a gift; age is a work of art. Your life is the most remarkable thing you will ever make.',
+    'Don\'t fear time passing too quickly. What matters isn\'t speed — it\'s letting time leave meaningful traces in you.',
+    'We don\'t get to decide how long we live. But we do get to decide how deep.',
+    'You don\'t need to conquer time. You only need to find your own rhythm within it. Fast or slow, your rhythm is the right one.',
+    'Every today was once the \'future\' you worried about. And here you are, living it. You\'ve already made it.',
+    'Accepting limits isn\'t giving up possibilities — it\'s making the remaining ones real, and therefore precious.',
+    'The deepest comfort isn\'t "you still have plenty of time" but "the time you have is already enough" — not more, not less, exactly what you need.',
+    'You don\'t have to live perfectly. You only have to live truly. Truthfulness is moving enough.',
+    'Life isn\'t a marathon or a sprint — it\'s your own walk. Fast or slow doesn\'t matter. What matters is that you\'re still on the road.',
+    'Some things aren\'t worth doing because you\'re good at them. They\'re worth doing because they\'re worth doing. Love. Companionship. A good meal shared with someone.',
+    'You don\'t need to excel at everything. Find one or two things that make you feel like yourself, and give yourself to them. That\'s enough.',
+  ];
+
+  // ── contextual messages based on percentage used ──
+  const contextualMessages = [
+    { maxPct: 20,
+      text: '你还很年轻，充裕本身恰恰是最大的风险。当你以为时间取之不尽，就不会真正面对"必须选择"这个事实。趁早练习舍弃——它会让你此后的人生少很多慌张。' },
+    { maxPct: 50,
+      text: '你正处在选择的黄金时期。真正的成熟不是学会如何搞定一切，而是坦然接受你永远搞不定一切。认真问自己：我应该在哪几件事上花掉我这一生？' },
+    { maxPct: 75,
+      text: '你已经走过了大半。"接受"比"追赶"更有力量。有限不是缺憾，而是意义的必要条件。把目光从"我还缺什么"转向"我已经拥有了什么"——你会发现另一种丰盛。' },
+    { maxPct: 90,
+      text: '剩下的时间不多了——这恰恰是你的优势。当选项减少，干扰自然消退。宇宙不在乎你怎么活——所以你终于可以只为你真正在乎的事而活。这是最深刻的自由。' },
+    { maxPct: Infinity,
+      text: '你无法让时间变多，但你可以让时间变深。平静地接受有限，不是放弃，是最终的解脱。你的一生——不多不少——就是你的一生。' },
+  ];
+
+  const contextualMessages_en = [
+    { maxPct: 20,
+      text: "You're still young, and the very abundance of time ahead is your greatest risk. When you believe time is endless, you never truly confront the fact that you have to choose. Practice letting go now — it will spare you a great deal of panic later." },
+    { maxPct: 50,
+      text: "You're in the golden age of choosing. Real maturity isn't learning to handle everything — it's accepting, calmly, that you'll never handle everything. Ask yourself honestly: what few things should I spend my one and only life on?" },
+    { maxPct: 75,
+      text: "You've lived more than half your time. Acceptance is more powerful than pursuit. Finitude isn't a flaw — it's what makes meaning possible. Stop asking 'what am I missing?' and start asking 'what do I already have?' You might be surprised by the abundance you find." },
+    { maxPct: 90,
+      text: "There isn't much time left — and that's precisely your advantage. Fewer options means fewer distractions. The universe doesn't care how you spend your days — which means you're finally free to spend them on what you actually care about. That is the deepest freedom of all." },
+    { maxPct: Infinity,
+      text: "You can't make time longer, but you can make it deeper. Accepting finitude isn't giving up — it's the final liberation. Your life — not more, not less — is your life. And that is enough." },
+  ];
+
+  function getQuote(ageYears, remainWeeks, pctUsed) {
+    var qArr = (_lang === 'en') ? quotes_en : quotes;
+    var rArr = (_lang === 'en') ? remainQuotes_en : remainQuotes;
+    var cArr = (_lang === 'en') ? contextualMessages_en : contextualMessages;
+    var eArr = (_lang === 'en') ? encouragements_en : encouragements;
+    const ageQ = qArr.find(q => ageYears < q.maxAge) || qArr[qArr.length - 1];
+    const remQ = rArr.find(q => remainWeeks >= q.minWeeks) || rArr[rArr.length - 1];
+    const ctxQ = cArr.find(q => pctUsed < q.maxPct) || cArr[cArr.length - 1];
+    const encourage = eArr[Math.floor(Math.random() * eArr.length)];
+    return { ageQuote: ageQ.text, remainQuote: remQ.text, contextMsg: ctxQ.text, encourage };
+  }
+
+  // ── core calc ──
+  function calc(birthStr, lifeYears) {
+    const birth = parseDate(birthStr);
+    if (!birth) return null;
+    const now = new Date();
+    if (birth > now) return { error: t('err-future-birth') };
+
+    const totalW     = lifeYears * WEEKS_PER_YEAR;
+    const livedW     = (now - birth) / (7 * 24 * 60 * 60 * 1000);
+    const remainW    = Math.max(0, totalW - livedW);
+    const ageYears   = livedW / WEEKS_PER_YEAR;
+    const pct        = Math.min(100, Math.max(0, livedW / totalW * 100));
+    const endDate    = new Date(birth.getTime() + lifeYears * 365.25 * 24 * 60 * 60 * 1000);
+    return { totalW, livedW, remainW, ageYears, pct, endDate };
+  }
+
+  // ── render stats ──
+  function renderStats(data) {
+    var locale = (_lang === 'en') ? 'en-US' : 'zh-CN';
+    if (!data || data.error) {
+      remainDisplay.textContent = '--';
+      livedDisplay.textContent  = t('stat-ring-label') + ' -- ' + t('week-of');
+      pctDisplay.textContent    = '--%';
+      ageDisplay.textContent    = '--';
+      ageSubtitle.textContent   = t('stat-age-label') + ' ----';
+      endDisplay.textContent    = '----';
+      ringArc.style.strokeDashoffset = 226.2;
+      lifeProgressFill.style.width   = '0%';
+      barPctText.textContent         = '--%';
+      return;
+    }
+    const rounded = Math.round(data.totalW);
+    const pct     = data.pct;
+    const weeksLived = Math.round(data.livedW);
+
+    remainDisplay.textContent =
+      (data.remainW < 0 ? 0 : data.remainW)
+        .toLocaleString(locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+
+    // progress ring
+    pctDisplay.textContent = pct.toFixed(1) + '%';
+    livedDisplay.textContent = t('stat-ring-label') + ' ' + weeksLived.toLocaleString() + ' ' + t('week-of') + ' / ' + rounded.toLocaleString() + ' ' + t('week-of');
+    ringArc.style.strokeDashoffset = 226.2 * (1 - pct / 100);
+
+    // progress bar
+    lifeProgressFill.style.width = pct + '%';
+    barPctText.textContent = (100 - pct).toFixed(1) + '%';
+
+    // age
+    ageDisplay.textContent = data.ageYears < 1
+      ? Math.floor(data.ageYears * 12) + ' ' + t('months-old')
+      : data.ageYears.toFixed(1) + ' ' + t('years-old');
+    const birthYear = birthDate.split('-')[0];
+    ageSubtitle.textContent = t('stat-age-label') + ' ' + birthYear;
+
+    // end date (in slider area)
+    var ed = data.endDate;
+    if (_lang === 'en') {
+      endDisplay.textContent = (ed.getMonth()+1) + '/' + ed.getDate() + '/' + ed.getFullYear();
+    } else {
+      endDisplay.textContent = ed.getFullYear() + '-' +
+        String(ed.getMonth() + 1).padStart(2, '0') + '-' +
+        String(ed.getDate()).padStart(2, '0');
+    }
+  }
+
+  // ── render grid ──
+  function renderGrid(data) {
+    weekGrid.innerHTML = '';
+    if (!data || data.error || data.totalW <= 0) return;
+
+    const total = Math.ceil(data.totalW);
+    const lived = data.livedW;
+    const rows  = Math.ceil(total / 52);
+
+    const frag = document.createDocumentFragment();
+
+    for (let r = 0; r < rows; r++) {
+      const yearNum = r + 1;
+      const labelEl = document.createElement('div');
+      labelEl.className = 'year-label';
+      if (yearNum % 5 === 0 || yearNum === 1 || r === rows - 1) {
+        labelEl.textContent = yearNum;
+      }
+      frag.appendChild(labelEl);
+
+      for (let c = 0; c < 52; c++) {
+        const idx = r * 52 + c + 1;
+        if (idx > total) {
+          const filler = document.createElement('div');
+          filler.style.visibility = 'hidden';
+          frag.appendChild(filler);
+          continue;
+        }
+
+        const dot = document.createElement('div');
+        dot.className = 'week-dot';
+
+        if (idx === Math.floor(lived) + 1) {
+          dot.classList.add('current');
+          dot.setAttribute('data-week', idx);
+        } else if (idx <= lived) {
+          dot.classList.add('lived');
+          dot.setAttribute('data-week', idx);
+        } else {
+          dot.classList.add('remaining');
+          dot.setAttribute('data-week', idx);
+        }
+
+        // tooltip
+        const tip = document.createElement('span');
+        tip.className = 'tooltip';
+        const weekYear = (idx / WEEKS_PER_YEAR).toFixed(1);
+        if (_lang === 'en') {
+          tip.textContent = 'Week ' + idx + ' (~' + weekYear + ' yrs)';
+        } else {
+          tip.textContent = '第 ' + idx + ' 周（约 ' + weekYear + ' 岁）';
+        }
+        dot.appendChild(tip);
+
+        frag.appendChild(dot);
+      }
+    }
+    weekGrid.appendChild(frag);
+
+    // scroll to current week row
+    const currentRow = Math.floor(lived / 52);
+    if (currentRow > 2) {
+      const availW = weekGrid.offsetWidth - (2.2 * 16) - (51 * 1.5);
+      const dotSize = Math.max(4, Math.min(8, availW / 52));
+      const rowHeight = dotSize + 1.5;
+      gridScroll.scrollTop = Math.max(0, (currentRow - 3) * rowHeight);
+    }
+  }
+
+  // ── insert line break after —— so em dash leads into next thought ──
+  function insertBreak(text) {
+    const idx = text.indexOf('——');
+    if (idx > 0) {
+      const after = idx + 2;
+      return text.slice(0, after) + '<br>' + text.slice(after);
+    }
+    return text;
+  }
+
+  // ── render quotes (flip card back + teaser below grid) ──
+  function renderQuotes(data) {
+    if (!data || data.error) {
+      flipQuoteAge.innerHTML = '';
+      flipQuoteRemain.innerHTML = '';
+      teaserQuote.innerHTML = '';
+      return;
+    }
+    const { ageQuote, remainQuote, contextMsg, encourage } = getQuote(data.ageYears, data.remainW, data.pct);
+
+    // Flip card back: age quote only, centered
+    flipQuoteAge.innerHTML = insertBreak(ageQuote);
+    flipQuoteRemain.innerHTML = '';
+
+    // Teaser: contextual message + remain quote
+    teaserQuote.innerHTML =
+      '<div class="teaser-context">' + insertBreak(contextMsg) + '</div>' +
+      '<div class="teaser-accent"></div>' +
+      '<div class="teaser-remain">' + insertBreak(remainQuote) + '</div>';
+  }
+
+  // ── update everything ──
+  // ── current lived weeks (for year view) ──
+  let currentLivedW = 0;
+
+  function update() {
+    const data = calc(birthDate, lifespan);
+
+    if (data && data.error) {
+      errorMsg.textContent = data.error;
+      errorMsg.classList.remove('hidden');
+      renderStats(null);
+      weekGrid.innerHTML = '';
+      return;
+    }
+    errorMsg.classList.add('hidden');
+    currentLivedW = data.livedW;
+    renderStats(data);
+    renderGrid(data);
+    renderQuotes(data);
+    updateEntryMarkers();
+  }
+
+  // real-time tick: stats only
+  let tickId = null;
+  function startTick() {
+    if (tickId) return;
+    tickId = setInterval(function() {
+      const data = calc(birthDate, lifespan);
+      if (data && !data.error) {
+        renderStats(data);
+      }
+    }, 1000);
+  }
+  function stopTick() { if (tickId) { clearInterval(tickId); tickId = null; } }
+
+  window.addEventListener('beforeunload', stopTick);
+
+  function rebuild() { stopTick(); update(); populateLocatorSelects(); startTick(); }
+
+  // ── IndexedDB ──
+  const DB_NAME = 'fwt_journal';
+  const DB_VERSION = 1;
+  const STORE_NAME = 'entries';
+
+  function openDB() {
+    return new Promise(function(resolve, reject) {
+      const req = indexedDB.open(DB_NAME, DB_VERSION);
+      req.onupgradeneeded = function(e) {
+        const db = e.target.result;
+        if (!db.objectStoreNames.contains(STORE_NAME)) {
+          db.createObjectStore(STORE_NAME, { keyPath: 'weekIndex' });
+        }
+      };
+      req.onsuccess = function(e) { resolve(e.target.result); };
+      req.onerror = function(e) { reject(e.target.error); };
+    });
+  }
+
+  async function getEntry(weekIndex) {
+    const db = await openDB();
+    return new Promise(function(resolve, reject) {
+      const tx = db.transaction(STORE_NAME, 'readonly');
+      const store = tx.objectStore(STORE_NAME);
+      const req = store.get(weekIndex);
+      req.onsuccess = function() { resolve(req.result || null); };
+      req.onerror = function() { reject(req.error); };
+    });
+  }
+
+  async function saveEntry(weekIndex, data) {
+    const db = await openDB();
+    return new Promise(function(resolve, reject) {
+      const tx = db.transaction(STORE_NAME, 'readwrite');
+      const store = tx.objectStore(STORE_NAME);
+      const record = { weekIndex: weekIndex, text: data.text || '', media: data.media || [], updatedAt: Date.now() };
+      store.put(record);
+      tx.oncomplete = function() { resolve(); };
+      tx.onerror = function() { reject(tx.error); };
+    });
+  }
+
+  async function getAllEntryKeys() {
+    const db = await openDB();
+    return new Promise(function(resolve, reject) {
+      const tx = db.transaction(STORE_NAME, 'readonly');
+      const store = tx.objectStore(STORE_NAME);
+      const req = store.getAllKeys();
+      req.onsuccess = function() { resolve(req.result); };
+      req.onerror = function() { reject(req.error); };
+    });
+  }
+
+  // ── date helpers ──
+  function getDateFromWeekIndex(weekIndex, birthStr) {
+    const birth = parseDate(birthStr);
+    if (!birth) return null;
+    const startOfWeek = new Date(birth);
+    startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay() + 1);
+    const weekDate = new Date(startOfWeek);
+    weekDate.setDate(weekDate.getDate() + (weekIndex - 1) * 7);
+    return weekDate;
+  }
+
+  function getWeeksForYear(calendarYear, birthStr, totalWeeks) {
+    const birthYear = parseInt(birthStr.split('-')[0]);
+    const WEEKS_PER_YEAR = 365.25 / 7;
+    const startSearch = Math.max(1, Math.floor((calendarYear - birthYear - 1) * WEEKS_PER_YEAR) - 5);
+    const endSearch = Math.min(totalWeeks, Math.ceil((calendarYear - birthYear + 1) * WEEKS_PER_YEAR) + 5);
+    const byMonth = {};
+    for (let m = 0; m < 12; m++) byMonth[m] = [];
+    for (let wi = startSearch; wi <= endSearch; wi++) {
+      const date = getDateFromWeekIndex(wi, birthStr);
+      if (date && date.getFullYear() === calendarYear) {
+        byMonth[date.getMonth()].push(wi);
+      }
+    }
+    return byMonth;
+  }
+
+  // ── date locator helper ──
+  function getWeekIndexFromDate(dateStr, birthStr) {
+    const date = parseDate(dateStr);
+    const birth = parseDate(birthStr);
+    if (!date || !birth) return null;
+    const startOfWeek = new Date(birth);
+    startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay() + 1);
+    const diffDays = (date - startOfWeek) / (24 * 60 * 60 * 1000);
+    const weekIndex = Math.floor(diffDays / 7) + 1;
+    return weekIndex >= 1 ? weekIndex : null;
+  }
+
+  async function getAllEntries() {
+    const db = await openDB();
+    return new Promise(function(resolve, reject) {
+      const tx = db.transaction(STORE_NAME, 'readonly');
+      const store = tx.objectStore(STORE_NAME);
+      const req = store.getAll();
+      req.onsuccess = function() { resolve(req.result || []); };
+      req.onerror = function() { reject(req.error); };
+    });
+  }
+
+  // ── modal state ──
+  let currentModalWeek = null;
+  let currentMedia = [];
+
+  // ── modal functions ──
+  async function openWeekModal(weekIndex) {
+    const date = getDateFromWeekIndex(weekIndex, birthDate);
+    if (!date) return;
+    currentModalWeek = weekIndex;
+    const year = date.getFullYear();
+    const month = date.getMonth() + 1;
+    const day = date.getDate();
+    const weekEnd = new Date(date);
+    weekEnd.setDate(weekEnd.getDate() + 6);
+    const endMonth = weekEnd.getMonth() + 1;
+    const endDay = weekEnd.getDate();
+
+    document.getElementById('modal-week-info').textContent = (_lang === 'en' ? 'Week ' : '第 ') + weekIndex + (_lang === 'en' ? '' : ' 周');
+    if (_lang === 'en') {
+      var monthsEn = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      document.getElementById('modal-date-range').textContent = monthsEn[month-1] + ' ' + day + ' — ' + monthsEn[endMonth-1] + ' ' + endDay + ', ' + year;
+    } else {
+      document.getElementById('modal-date-range').textContent = year + ' 年 ' + month + ' 月 ' + day + ' 日 — ' + endMonth + ' 月 ' + endDay + ' 日';
+    }
+
+    const entry = await getEntry(weekIndex);
+    // Convert plain text to HTML for backward compatibility
+    var entryText = entry ? entry.text : '';
+    if (entryText && entryText.indexOf('<') === -1) {
+      entryText = entryText.replace(/\n/g, '<br>');
+    }
+    document.getElementById('modal-text').innerHTML = entryText;
+    currentMedia = entry && entry.media ? entry.media.slice() : [];
+    renderMediaGrid();
+    document.getElementById('modal-status').textContent = '';
+
+    // timestamp display
+    const tsLabel = document.getElementById('modal-timestamp-label');
+    const tsBtn = document.getElementById('modal-timestamp-insert');
+    if (entry && entry.updatedAt) {
+      const d = new Date(entry.updatedAt);
+      var ts;
+      if (_lang === 'en') {
+        var monthsEn = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        ts = monthsEn[d.getMonth()] + ' ' + d.getDate() + ', ' + d.getFullYear() + ' ' +
+          String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+      } else {
+        ts = d.getFullYear() + '-' +
+          String(d.getMonth() + 1).padStart(2, '0') + '-' +
+          String(d.getDate()).padStart(2, '0') + ' ' +
+          String(d.getHours()).padStart(2, '0') + ':' +
+          String(d.getMinutes()).padStart(2, '0');
+      }
+      tsLabel.textContent = t('modal-timestamp-label') + ' ' + ts;
+      tsBtn.style.display = '';
+    } else {
+      tsLabel.textContent = _lang === 'en' ? 'First entry' : '首次记录';
+      tsBtn.style.display = 'none';
+    }
+
+    document.getElementById('week-modal').classList.add('visible');
+  }
+
+  function closeWeekModal() {
+    // Auto-save on close if there's any unsaved content
+    if (autoSaveTimer) clearTimeout(autoSaveTimer);
+    if (currentModalWeek !== null) {
+      var editor = document.getElementById('modal-text');
+      applyAutoTimestamp(editor);
+      var text = editor.innerHTML;
+      if (text === '<br>' || text === '<br style="">' || text.indexOf('<') === -1 && text.trim() === '') text = '';
+      saveEntry(currentModalWeek, { text: text, media: currentMedia }).catch(function() {});
+    }
+    document.getElementById('week-modal').classList.remove('visible');
+    currentModalWeek = null;
+    currentMedia = [];
+  }
+
+  function applyAutoTimestamp(editor) {
+    var check = document.getElementById('auto-ts-check');
+    if (!check || !check.checked) return;
+    var now = new Date();
+    var ts = '[' +
+      now.getFullYear() + '-' +
+      String(now.getMonth() + 1).padStart(2, '0') + '-' +
+      String(now.getDate()).padStart(2, '0') + ' ' +
+      String(now.getHours()).padStart(2, '0') + ':' +
+      String(now.getMinutes()).padStart(2, '0') + ']';
+    var html = editor.innerHTML;
+    // Check if first content is already a timestamp span
+    var tsRe = /^\s*<span[^>]*style="[^"]*color:var\(--text-muted\)[^"]*"[^>]*>\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}\]<\/span>/;
+    var match = html.match(tsRe);
+    if (match) {
+      var newSpan = '<span style="color:var(--text-muted);font-size:0.75rem;">' + ts + '</span>';
+      html = html.replace(tsRe, newSpan);
+      editor.innerHTML = html;
+    } else {
+      var tsLine = '<span style="color:var(--text-muted);font-size:0.75rem;">' + ts + '</span><br><br>';
+      var trimmed = html.replace(/^(<br\s*\/?>)*/, '').trim();
+      if (!trimmed || trimmed === '') {
+        editor.innerHTML = tsLine;
+      } else {
+        editor.innerHTML = tsLine + html;
+      }
+    }
+  }
+
+  async function saveWeekEntry() {
+    if (currentModalWeek === null) return;
+
+    // Auto-timestamp before save
+    var editor = document.getElementById('modal-text');
+    applyAutoTimestamp(editor);
+
+    var text = editor.innerHTML;
+    // Clean up empty editor content
+    if (text === '<br>' || text === '<br style="">' || text.indexOf('<') === -1 && text.trim() === '') {
+      text = '';
+    }
+    const status = document.getElementById('modal-status');
+    status.textContent = _lang === 'en' ? 'Saving…' : '保存中…';
+    try {
+      await saveEntry(currentModalWeek, { text: text, media: currentMedia });
+      status.textContent = _lang === 'en' ? 'Saved ✓' : '已保存 ✓';
+      updateEntryMarkers();
+    } catch (e) {
+      status.textContent = _lang === 'en' ? 'Save failed, please retry' : '保存失败，请重试';
+    }
+  }
+
+  function getFileExt(name) {
+    var i = name.lastIndexOf('.');
+    return i > 0 ? name.slice(i + 1).toUpperCase() : '?';
+  }
+  function formatSize(bytes) {
+    if (!bytes) return '';
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / 1048576).toFixed(1) + ' MB';
+  }
+  function createDownloadBtn(url, fileName) {
+    var a = document.createElement('a');
+    a.className = 'download-btn';
+    a.textContent = _lang === 'en' ? '⬇ Download' : '⬇ 下载';
+    a.href = url;
+    a.download = fileName || 'file';
+    a.target = '_blank';
+    a.rel = 'noopener';
+    return a;
+  }
+
+  function renderMediaGrid() {
+    const grid = document.getElementById('media-grid');
+    grid.innerHTML = '';
+    currentMedia.forEach(function(item, index) {
+      const div = document.createElement('div');
+      div.className = 'media-item';
+      const url = URL.createObjectURL(item.data);
+      if (item.type === 'image') {
+        const img = document.createElement('img');
+        img.src = url;
+        div.appendChild(img);
+      } else if (item.type === 'audio') {
+        const audio = document.createElement('audio');
+        audio.controls = true;
+        audio.src = url;
+        div.appendChild(audio);
+      } else if (item.type === 'video') {
+        const video = document.createElement('video');
+        video.controls = true;
+        video.src = url;
+        div.appendChild(video);
+      } else if (item.type === 'document') {
+        div.className = 'media-item document';
+        const mime = (item.mime || '').toLowerCase();
+        const isPdf = mime === 'application/pdf';
+        const ext = getFileExt(item.name || (_lang === 'en' ? 'File' : '文件'));
+        if (isPdf) {
+          div.classList.add('has-preview');
+          const embed = document.createElement('embed');
+          embed.src = url;
+          embed.type = 'application/pdf';
+          div.appendChild(embed);
+          const bar = document.createElement('div');
+          bar.className = 'doc-preview-bar';
+          const badge = document.createElement('span');
+          badge.className = 'file-ext';
+          badge.textContent = ext;
+          bar.appendChild(badge);
+          const fi = document.createElement('div');
+          fi.className = 'file-info';
+          const fn = document.createElement('div');
+          fn.className = 'file-name';
+          fn.textContent = item.name || '';
+          fi.appendChild(fn);
+          bar.appendChild(fi);
+          const dl = createDownloadBtn(url, item.name);
+          bar.appendChild(dl);
+          div.appendChild(bar);
+        } else {
+          const badge = document.createElement('span');
+          badge.className = 'file-ext';
+          badge.textContent = ext;
+          div.appendChild(badge);
+          const fi = document.createElement('div');
+          fi.className = 'file-info';
+          const fn = document.createElement('div');
+          fn.className = 'file-name';
+          fn.textContent = item.name || '';
+          fi.appendChild(fn);
+          const fs = document.createElement('div');
+          fs.className = 'file-size';
+          fs.textContent = formatSize(item.data.size);
+          fi.appendChild(fs);
+          div.appendChild(fi);
+          const dl = createDownloadBtn(url, item.name);
+          div.appendChild(dl);
+        }
+      }
+      const label = document.createElement('div');
+      label.className = 'media-label';
+      label.textContent = item.name || '';
+      div.appendChild(label);
+      const del = document.createElement('button');
+      del.className = 'media-delete';
+      del.textContent = '✕';
+      del.dataset.index = index;
+      del.addEventListener('click', function(e) {
+        e.stopPropagation();
+        const idx = parseInt(this.dataset.index);
+        currentMedia.splice(idx, 1);
+        renderMediaGrid();
+      });
+      div.appendChild(del);
+      grid.appendChild(div);
+    });
+  }
+
+  function addFileToMedia(file, type) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const blob = new Blob([e.target.result], { type: file.type });
+      currentMedia.push({ id: Date.now() + '_' + Math.random().toString(36).slice(2, 8), type: type, data: blob, name: file.name, mime: file.type });
+      renderMediaGrid();
+    };
+    reader.readAsArrayBuffer(file);
+  }
+
+  // ── entry markers ──
+  async function updateEntryMarkers() {
+    try {
+      const keys = await getAllEntryKeys();
+      const keySet = {};
+      keys.forEach(function(k) { keySet[k] = true; });
+      document.querySelectorAll('.week-dot').forEach(function(dot) {
+        var idx = parseInt(dot.dataset.week);
+        if (keySet[idx]) {
+          dot.classList.add('has-entry');
+        } else {
+          dot.classList.remove('has-entry');
+        }
+      });
+      document.querySelectorAll('.year-dot').forEach(function(dot) {
+        var idx = parseInt(dot.dataset.index);
+        if (keySet[idx]) {
+          dot.classList.add('has-entry');
+        } else {
+          dot.classList.remove('has-entry');
+        }
+      });
+    } catch (e) {
+      // IndexedDB not available
+    }
+  }
+
+  // ── year view ──
+  let currentYear = new Date().getFullYear();
+
+  function renderYearView(calendarYear) {
+    currentYear = calendarYear;
+    document.getElementById('year-nav-label').value = String(calendarYear);
+    const grid = document.getElementById('year-grid');
+    grid.innerHTML = '';
+    const data = calc(birthDate, lifespan);
+    if (!data || data.error || data.totalW <= 0) return;
+    const totalW = Math.ceil(data.totalW);
+    const livedW = data.livedW;
+    const weeksByMonth = getWeeksForYear(calendarYear, birthDate, totalW);
+    const currentWeekIdx = Math.floor(livedW) + 1;
+    const currentWeekDate = getDateFromWeekIndex(currentWeekIdx, birthDate);
+    const currentCalYear = currentWeekDate ? currentWeekDate.getFullYear() : -1;
+    const currentMonthIdx = currentWeekDate ? currentWeekDate.getMonth() : -1;
+    const isCurrentYear = (calendarYear === currentCalYear);
+
+    const frag = document.createDocumentFragment();
+    for (let m = 0; m < 12; m++) {
+      const monthWeeks = weeksByMonth[m] || [];
+      const block = document.createElement('div');
+      block.className = 'month-block';
+      if (isCurrentYear && m === currentMonthIdx) {
+        block.classList.add('current-month');
+      }
+      const label = document.createElement('div');
+      label.className = 'month-label';
+      label.textContent = t('months')[m];
+      block.appendChild(label);
+      const weeksDiv = document.createElement('div');
+      weeksDiv.className = 'month-weeks';
+      monthWeeks.forEach(function(wi) {
+        const dot = document.createElement('div');
+        dot.className = 'year-dot';
+        dot.dataset.index = wi;
+        if (wi === currentWeekIdx && isCurrentYear) {
+          dot.classList.add('current');
+        } else if (wi <= livedW) {
+          dot.classList.add('lived');
+        } else {
+          dot.classList.add('remaining');
+        }
+        dot.addEventListener('click', function() {
+          openWeekModal(parseInt(this.dataset.index));
+        });
+        weeksDiv.appendChild(dot);
+      });
+      block.appendChild(weeksDiv);
+      frag.appendChild(block);
+    }
+    grid.appendChild(frag);
+    updateEntryMarkers();
+  }
+
+  // ── review view ──
+  let reviewRange = 'all';
+
+  async function renderReview() {
+    const container = document.getElementById('review-content');
+    const summary = document.getElementById('review-summary');
+    container.innerHTML = '';
+    summary.textContent = '';
+
+    const data = calc(birthDate, lifespan);
+    if (!data || data.error) return;
+    const livedW = Math.floor(data.livedW);
+    const totalW = Math.ceil(data.totalW);
+
+    let weekStart = 1;
+    let weekEnd = livedW;
+    let summaryLabel = '';
+
+    if (reviewRange === 'all') {
+      weekStart = 1;
+      weekEnd = livedW;
+      summaryLabel = t('review-all-label') + ' ' + livedW + ' ' + t('review-weeks');
+    } else if (reviewRange === 'year') {
+      const yearVal = parseInt(document.getElementById('review-year-input').value);
+      if (isNaN(yearVal)) { container.innerHTML = '<div class="review-empty">' + (_lang === 'en' ? 'Enter a valid year' : '请输入有效年份') + '</div>'; return; }
+      const birthYear = parseInt(birthDate.split('-')[0]);
+      const startSearch = Math.max(1, Math.floor((yearVal - birthYear - 1) * 52) - 10);
+      const endSearch = Math.min(totalW, Math.ceil((yearVal - birthYear + 1) * 52) + 10);
+      weekStart = totalW;
+      weekEnd = 0;
+      for (let wi = startSearch; wi <= endSearch; wi++) {
+        const d = getDateFromWeekIndex(wi, birthDate);
+        if (d && d.getFullYear() === yearVal) {
+          if (wi < weekStart) weekStart = wi;
+          if (wi > weekEnd) weekEnd = wi;
+        }
+      }
+      if (weekStart > weekEnd) { weekStart = 1; weekEnd = 0; }
+      weekEnd = Math.min(weekEnd, livedW);
+      summaryLabel = (_lang === 'en' ? yearVal + ' · Week ' : yearVal + ' 年 · 第 ') + weekStart + ' - ' + weekEnd + (_lang === 'en' ? '' : ' 周');
+    } else if (reviewRange === 'month') {
+      const yearVal = parseInt(document.getElementById('review-my-year').value);
+      const monthVal = parseInt(document.getElementById('review-month-select').value);
+      if (isNaN(yearVal)) { container.innerHTML = '<div class="review-empty">' + (_lang === 'en' ? 'Enter a valid year' : '请输入有效年份') + '</div>'; return; }
+      const birthYear = parseInt(birthDate.split('-')[0]);
+      const startSearch = Math.max(1, Math.floor((yearVal - birthYear - 1) * 52) - 10);
+      const endSearch = Math.min(totalW, Math.ceil((yearVal - birthYear + 1) * 52) + 10);
+      weekStart = totalW;
+      weekEnd = 0;
+      for (let wi = startSearch; wi <= endSearch; wi++) {
+        const d = getDateFromWeekIndex(wi, birthDate);
+        if (d && d.getFullYear() === yearVal && d.getMonth() === monthVal) {
+          if (wi < weekStart) weekStart = wi;
+          if (wi > weekEnd) weekEnd = wi;
+        }
+      }
+      if (weekStart > weekEnd) { weekStart = 1; weekEnd = 0; }
+      weekEnd = Math.min(weekEnd, livedW);
+      summaryLabel = yearVal + ' ' + t('months')[monthVal] + ' · ' + t('week-label') + ' ' + weekStart + ' - ' + weekEnd;
+    } else if (reviewRange === 'custom') {
+      const startVal = document.getElementById('review-start-date').value;
+      const endVal = document.getElementById('review-end-date').value;
+      if (startVal) {
+        const startWi = getWeekIndexFromDate(startVal, birthDate);
+        if (startWi !== null && startWi > 0) weekStart = Math.max(1, startWi);
+      }
+      if (endVal) {
+        const endWi = getWeekIndexFromDate(endVal, birthDate);
+        if (endWi !== null && endWi > 0) weekEnd = Math.min(livedW, endWi);
+      }
+      summaryLabel = (startVal || (_lang === 'en' ? 'earliest' : '最早')) + ' → ' + (endVal || (_lang === 'en' ? 'now' : '现在'));
+    }
+
+    if (weekStart > weekEnd) {
+      container.innerHTML = '<div class="review-empty">' + t('review-no-range') + '</div>';
+      return;
+    }
+
+    let allEntries = [];
+    try {
+      allEntries = await getAllEntries();
+    } catch (e) {
+      container.innerHTML = '<div class="review-empty">' + t('err-load-failed') + '</div>';
+      return;
+    }
+
+    const filtered = allEntries.filter(function(e) {
+      return e.weekIndex >= weekStart && e.weekIndex <= weekEnd;
+    });
+    filtered.sort(function(a, b) { return a.weekIndex - b.weekIndex; });
+
+    if (filtered.length === 0) {
+      summary.textContent = summaryLabel + ' · ' + (_lang === 'en' ? 'no entries' : '暂无记录');
+      container.innerHTML = '<div class="review-empty">' + t('review-empty') + '</div>';
+      return;
+    }
+
+    summary.textContent = summaryLabel + ' · ' + filtered.length + ' ' + t('review-records');
+
+    const list = document.createElement('div');
+    list.className = 'review-entry-list';
+    filtered.forEach(function(entry) {
+      const el = document.createElement('div');
+      el.className = 'review-entry';
+      const date = getDateFromWeekIndex(entry.weekIndex, birthDate);
+
+      const header = document.createElement('div');
+      header.className = 'review-entry-header';
+      const weekTitle = document.createElement('span');
+      weekTitle.className = 'review-entry-week';
+      weekTitle.textContent = (_lang === 'en' ? 'Week ' : '第 ') + entry.weekIndex + (_lang === 'en' ? '' : ' 周');
+      header.appendChild(weekTitle);
+      if (date) {
+        const dateEl = document.createElement('span');
+        dateEl.className = 'review-entry-date';
+        if (_lang === 'en') {
+          var monthsEn = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+          dateEl.textContent = monthsEn[date.getMonth()] + ' ' + date.getDate() + ', ' + date.getFullYear();
+        } else {
+          dateEl.textContent = date.getFullYear() + ' 年 ' + (date.getMonth() + 1) + ' 月 ' + date.getDate() + ' 日' + t('start-from');
+        }
+        header.appendChild(dateEl);
+      }
+      el.appendChild(header);
+
+      const textEl = document.createElement('div');
+      textEl.className = 'review-entry-text';
+      // Convert plain text to HTML for backward compatibility
+      var entryText = entry.text || '';
+      if (entryText && entryText.indexOf('<') === -1) {
+        entryText = entryText.replace(/\n/g, '<br>');
+      }
+      textEl.innerHTML = entryText;
+      el.appendChild(textEl);
+
+      if (entry.media && entry.media.length > 0) {
+        const mg = document.createElement('div');
+        mg.className = 'media-grid';
+        entry.media.forEach(function(item) {
+          const mdiv = document.createElement('div');
+          mdiv.className = 'media-item';
+          const url = URL.createObjectURL(item.data);
+          if (item.type === 'image') {
+            const img = document.createElement('img'); img.src = url; mdiv.appendChild(img);
+          } else if (item.type === 'audio') {
+            const audio = document.createElement('audio'); audio.controls = true; audio.src = url; mdiv.appendChild(audio);
+          } else if (item.type === 'video') {
+            const video = document.createElement('video'); video.controls = true; video.src = url; mdiv.appendChild(video);
+          } else if (item.type === 'document') {
+            mdiv.className = 'media-item document';
+            const ext = getFileExt(item.name || '');
+            const badge = document.createElement('span'); badge.className = 'file-ext'; badge.textContent = ext; mdiv.appendChild(badge);
+            const fi = document.createElement('div'); fi.className = 'file-info';
+            const fn = document.createElement('div'); fn.className = 'file-name'; fn.textContent = item.name || ''; fi.appendChild(fn);
+            mdiv.appendChild(fi);
+            const dl = createDownloadBtn(url, item.name); mdiv.appendChild(dl);
+            mdiv.style.maxWidth = '160px';
+          }
+          mg.appendChild(mdiv);
+        });
+        el.appendChild(mg);
+      }
+
+      // Timestamp
+      if (entry.updatedAt) {
+        var tsEl = document.createElement('div');
+        tsEl.className = 'review-entry-timestamp';
+        var d = new Date(entry.updatedAt);
+        if (_lang === 'en') {
+          var monthsEn = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+          tsEl.textContent = t('modal-timestamp-label') + ' ' + monthsEn[d.getMonth()] + ' ' + d.getDate() + ', ' + d.getFullYear() + ' ' +
+            String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+        } else {
+          tsEl.textContent = t('modal-timestamp-label') + ' ' + d.getFullYear() + '-' +
+            String(d.getMonth() + 1).padStart(2, '0') + '-' +
+            String(d.getDate()).padStart(2, '0') + ' ' +
+            String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+        }
+        el.appendChild(tsEl);
+      }
+
+      el.style.cursor = 'pointer';
+      el.addEventListener('click', function() { openWeekModal(entry.weekIndex); });
+      list.appendChild(el);
+    });
+    container.appendChild(list);
+  }
+
+  // ── view switching ──
+  function switchView(view) {
+    var gridScroll = document.getElementById('grid-scroll');
+    var yearView = document.getElementById('year-view');
+    var reviewView = document.getElementById('review-view');
+    var btns = document.querySelectorAll('.view-btn');
+    btns.forEach(function(b) { b.classList.remove('active'); });
+    gridScroll.style.display = 'none';
+    yearView.classList.remove('visible');
+    reviewView.classList.remove('visible');
+    if (view === 'year') {
+      document.querySelector('.view-btn[data-view="year"]').classList.add('active');
+      yearView.classList.add('visible');
+      renderYearView(currentYear);
+    } else if (view === 'review') {
+      document.querySelector('.view-btn[data-view="review"]').classList.add('active');
+      reviewView.classList.add('visible');
+      renderReview();
+    } else {
+      document.querySelector('.view-btn[data-view="grid"]').classList.add('active');
+      gridScroll.style.display = '';
+    }
+  }
+
+  // ── modal events ──
+  document.getElementById('modal-close').addEventListener('click', closeWeekModal);
+  document.getElementById('modal-fullscreen').addEventListener('click', function() {
+    document.getElementById('week-modal').classList.toggle('fullscreen');
+  });
+  document.getElementById('week-modal').addEventListener('click', function(e) {
+    if (e.target === this) closeWeekModal();
+  });
+  document.getElementById('modal-save').addEventListener('click', saveWeekEntry);
+
+  // ── auto-save on text input ──
+  var autoSaveTimer = null;
+  document.getElementById('modal-text').addEventListener('input', function() {
+    if (autoSaveTimer) clearTimeout(autoSaveTimer);
+    autoSaveTimer = setTimeout(function() {
+      if (currentModalWeek === null) return;
+      var editor = document.getElementById('modal-text');
+      applyAutoTimestamp(editor);
+      var text = editor.innerHTML;
+      if (text === '<br>' || text === '<br style="">' || text.indexOf('<') === -1 && text.trim() === '') text = '';
+      var status = document.getElementById('modal-status');
+      saveEntry(currentModalWeek, { text: text, media: currentMedia }).then(function() {
+        status.textContent = t('auto-saved') + ' ✓';
+        setTimeout(function() { status.textContent = ''; }, 2000);
+        updateEntryMarkers();
+      }).catch(function() {});
+    }, 1500);
+  });
+
+  // ── share entry ──
+  document.getElementById('modal-share').addEventListener('click', function() {
+    if (currentModalWeek === null) return;
+    var text = document.getElementById('modal-text').innerText;
+    var weekInfo = document.getElementById('modal-week-info').textContent;
+    var dateRange = document.getElementById('modal-date-range').textContent;
+    var mediaCount = currentMedia.length;
+
+    var lines = [];
+    lines.push(weekInfo + ' · ' + dateRange);
+    lines.push('');
+    if (text) lines.push(text);
+    if (mediaCount > 0) {
+      lines.push('');
+      lines.push(_lang === 'en' ? '[📎 ' + mediaCount + ' file(s)]' : '[📎 ' + mediaCount + ' 个附件]');
+    }
+    lines.push('');
+    lines.push(_lang === 'en' ? '— from Four Thousand Weeks Life Journal' : '— 来自四千周生命倒计时');
+    lines.push(window.location.href);
+
+    var content = lines.join('\n');
+    navigator.clipboard.writeText(content).then(function() {
+      showShareToast();
+    }).catch(function() {
+      // Fallback
+      var ta = document.createElement('textarea');
+      ta.value = content;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      showShareToast();
+    });
+  });
+  function showShareToast() {
+    var toast = document.getElementById('share-toast');
+    if (!toast) return;
+    toast.textContent = t('share-copied');
+    toast.classList.add('show');
+    setTimeout(function() { toast.classList.remove('show'); }, 2000);
+  }
+
+  document.getElementById('file-image').addEventListener('change', function() {
+    Array.from(this.files).forEach(function(f) { addFileToMedia(f, 'image'); });
+    this.value = '';
+  });
+  document.getElementById('file-audio').addEventListener('change', function() {
+    if (this.files[0]) { addFileToMedia(this.files[0], 'audio'); }
+    this.value = '';
+  });
+  document.getElementById('file-video').addEventListener('change', function() {
+    if (this.files[0]) { addFileToMedia(this.files[0], 'video'); }
+    this.value = '';
+  });
+  document.getElementById('file-document').addEventListener('change', function() {
+    Array.from(this.files).forEach(function(f) { addFileToMedia(f, 'document'); });
+    this.value = '';
+  });
+
+  // ── paste support ──
+  document.getElementById('modal-text').addEventListener('paste', function(e) {
+    handlePaste(e);
+  });
+  document.querySelector('.modal-body').addEventListener('paste', function(e) {
+    // Only handle if the paste target is not the textarea itself (already handled above)
+    if (e.target.id !== 'modal-text') handlePaste(e);
+  });
+  function handlePaste(e) {
+    var items = e.clipboardData && e.clipboardData.items;
+    if (!items) return;
+    var hasFiles = false;
+    for (var pi = 0; pi < items.length; pi++) {
+      var item = items[pi];
+      if (item.kind === 'file') {
+        var file = item.getAsFile();
+        if (!file) continue;
+        hasFiles = true;
+        var type = 'document';
+        if (file.type.startsWith('image/')) type = 'image';
+        else if (file.type.startsWith('audio/')) type = 'audio';
+        else if (file.type.startsWith('video/')) type = 'video';
+        // Generate a name for unnamed clipboard files
+        if (!file.name) {
+          var ext = file.type.split('/')[1] || 'bin';
+          file = new File([file], 'clipboard-' + Date.now() + '.' + ext, { type: file.type });
+        }
+        addFileToMedia(file, type);
+      }
+    }
+    if (hasFiles) {
+      e.preventDefault();
+      // Show brief status
+      var statusEl = document.getElementById('modal-status');
+      if (statusEl) {
+        statusEl.textContent = _lang === 'en' ? 'Files pasted ✓' : '已粘贴文件 ✓';
+        setTimeout(function() { statusEl.textContent = ''; }, 2000);
+      }
+    }
+  }
+
+  // ── drag-and-drop support ──
+  var modalBody = document.querySelector('.modal-body');
+  var dropzone = document.getElementById('modal-dropzone');
+  var dragCounter = 0;
+
+  modalBody.addEventListener('dragenter', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounter++;
+    dropzone.classList.add('visible');
+  });
+
+  modalBody.addEventListener('dragover', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+  });
+
+  modalBody.addEventListener('dragleave', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounter--;
+    if (dragCounter <= 0) {
+      dragCounter = 0;
+      dropzone.classList.remove('visible');
+    }
+  });
+
+  modalBody.addEventListener('drop', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounter = 0;
+    dropzone.classList.remove('visible');
+
+    var files = e.dataTransfer && e.dataTransfer.files;
+    if (!files || files.length === 0) return;
+
+    var count = 0;
+    for (var di = 0; di < files.length; di++) {
+      var f = files[di];
+      var ftype = 'document';
+      if (f.type.startsWith('image/')) ftype = 'image';
+      else if (f.type.startsWith('audio/')) ftype = 'audio';
+      else if (f.type.startsWith('video/')) ftype = 'video';
+      addFileToMedia(f, ftype);
+      count++;
+    }
+
+    var statusEl = document.getElementById('modal-status');
+    if (statusEl) {
+      statusEl.textContent = _lang === 'en' ? count + ' file(s) added ✓' : '已添加 ' + count + ' 个文件 ✓';
+      setTimeout(function() { statusEl.textContent = ''; }, 2000);
+    }
+  });
+
+  // ── view events ──
+  document.querySelectorAll('.view-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      switchView(this.dataset.view);
+    });
+  });
+  document.getElementById('year-prev').addEventListener('click', function() {
+    const minYear = parseInt(birthDate.split('-')[0]);
+    if (currentYear > minYear) renderYearView(currentYear - 1);
+  });
+  document.getElementById('year-next').addEventListener('click', function() {
+    const data = calc(birthDate, lifespan);
+    if (!data || data.error) return;
+    const lastDate = getDateFromWeekIndex(Math.ceil(data.totalW), birthDate);
+    const maxYear = lastDate ? lastDate.getFullYear() : parseInt(birthDate.split('-')[0]) + lifespan;
+    if (currentYear < maxYear) renderYearView(currentYear + 1);
+  });
+
+  // ── year input direct entry ──
+  document.getElementById('year-nav-label').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') {
+      this.blur();
+    }
+  });
+  document.getElementById('year-nav-label').addEventListener('blur', function() {
+    const val = parseInt(this.value);
+    if (isNaN(val)) { this.value = currentYear; return; }
+    const minYear = parseInt(birthDate.split('-')[0]);
+    const data = calc(birthDate, lifespan);
+    if (!data || data.error) { this.value = currentYear; return; }
+    const lastDate = getDateFromWeekIndex(Math.ceil(data.totalW), birthDate);
+    const maxYear = lastDate ? lastDate.getFullYear() : minYear + lifespan;
+    const clamped = Math.max(minYear, Math.min(maxYear, val));
+    if (clamped !== val) this.value = clamped;
+    renderYearView(clamped);
+  });
+
+  // ── week grid click delegation ──
+  document.getElementById('week-grid').addEventListener('click', function(e) {
+    var dot = e.target.closest('.week-dot');
+    if (dot) {
+      var idx = parseInt(dot.dataset.week);
+      if (idx > 0) {
+        openWeekModal(idx);
+      }
+    }
+  });
+
+  // ── flip card click ──
+  remainCard.addEventListener('click', function() {
+    this.classList.toggle('flipped');
+  });
+
+  // ── locator event handlers ──
+  locatorYearSelect.addEventListener('change', updateLocatorDayOptions);
+  locatorMonthSelect.addEventListener('change', updateLocatorDayOptions);
+
+  document.getElementById('locator-this-week').addEventListener('click', function() {
+    const now = new Date();
+    locatorYearSelect.value = String(now.getFullYear());
+    locatorMonthSelect.value = String(now.getMonth() + 1);
+    updateLocatorDayOptions();
+    locatorDaySelect.value = String(now.getDate());
+    // Trigger locate
+    const val = getLocatorDateStr();
+    if (!val) return;
+    const wi = getWeekIndexFromDate(val, birthDate);
+    if (wi === null) { locatorInfo.textContent = t('err-out-of-range'); return; }
+    const data = calc(birthDate, lifespan);
+    if (!data || data.error) return;
+    const date = getDateFromWeekIndex(wi, birthDate);
+    if (!date) { locatorInfo.textContent = t('err-out-of-range'); return; }
+    var dateStr;
+    if (_lang === 'en') {
+      var monthsEn = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      dateStr = monthsEn[date.getMonth()] + ' ' + date.getDate() + ', ' + date.getFullYear();
+    } else {
+      dateStr = date.getFullYear() + ' 年 ' + (date.getMonth() + 1) + ' 月 ' + date.getDate() + ' 日';
+    }
+    locatorInfo.textContent = '→ ' + t('week-label') + ' ' + wi + ' (' + dateStr + ')';
+    const activeView = document.querySelector('.view-btn.active');
+    if (activeView && activeView.dataset.view === 'year') {
+      renderYearView(date.getFullYear());
+    } else if (activeView && activeView.dataset.view === 'grid') {
+      if (wi <= Math.ceil(data.totalW)) {
+        var dot = document.querySelector('.week-dot[data-week="' + wi + '"]');
+        if (dot) dot.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      }
+    }
+  });
+
+  document.getElementById('locator-goto').addEventListener('click', function() {
+    const val = getLocatorDateStr();
+    if (!val) return;
+    const wi = getWeekIndexFromDate(val, birthDate);
+    if (wi === null) { locatorInfo.textContent = t('err-out-of-range'); return; }
+    const data = calc(birthDate, lifespan);
+    if (!data || data.error) return;
+    const date = getDateFromWeekIndex(wi, birthDate);
+    if (!date) { locatorInfo.textContent = t('err-out-of-range'); return; }
+    var dateStr;
+    if (_lang === 'en') {
+      var monthsEn2 = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      dateStr = monthsEn2[date.getMonth()] + ' ' + date.getDate() + ', ' + date.getFullYear();
+    } else {
+      dateStr = date.getFullYear() + ' 年 ' + (date.getMonth() + 1) + ' 月 ' + date.getDate() + ' 日';
+    }
+    locatorInfo.textContent = '→ ' + t('week-label') + ' ' + wi + ' (' + dateStr + ')';
+    const activeView = document.querySelector('.view-btn.active');
+    if (activeView && activeView.dataset.view === 'year') {
+      renderYearView(date.getFullYear());
+    } else if (activeView && activeView.dataset.view === 'grid') {
+      if (wi <= Math.ceil(data.totalW)) {
+        var dot = document.querySelector('.week-dot[data-week="' + wi + '"]');
+        if (dot) dot.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      }
+    }
+  });
+
+  document.getElementById('locator-jump').addEventListener('click', function() {
+    const val = getLocatorDateStr();
+    if (!val) return;
+    const wi = getWeekIndexFromDate(val, birthDate);
+    if (wi === null) { locatorInfo.textContent = t('err-out-of-range'); return; }
+    openWeekModal(wi);
+  });
+
+  document.getElementById('locator-reset').addEventListener('click', function() {
+    const now = new Date();
+    locatorYearSelect.value = String(now.getFullYear());
+    locatorMonthSelect.value = String(now.getMonth() + 1);
+    updateLocatorDayOptions();
+    locatorDaySelect.value = String(now.getDate());
+    locatorInfo.textContent = '';
+    var data = calc(birthDate, lifespan);
+    if (data && !data.error) {
+      var lived = data.livedW;
+      var currentRow = Math.floor(lived / 52);
+      if (currentRow > 2) {
+        var availW = weekGrid.offsetWidth - (2.2 * 16) - (51 * 1.5);
+        var dotSize = Math.max(4, Math.min(8, availW / 52));
+        var rowHeight = dotSize + 1.5;
+        gridScroll.scrollTop = Math.max(0, (currentRow - 3) * rowHeight);
+      }
+    }
+    var activeView = document.querySelector('.view-btn.active');
+    if (activeView && activeView.dataset.view !== 'grid') {
+      switchView('grid');
+    }
+  });
+
+  // ── timestamp insert event ──
+  document.getElementById('modal-timestamp-insert').addEventListener('click', function() {
+    const editor = document.getElementById('modal-text');
+    const now = new Date();
+    const ts = '[' +
+      now.getFullYear() + '-' +
+      String(now.getMonth() + 1).padStart(2, '0') + '-' +
+      String(now.getDate()).padStart(2, '0') + ' ' +
+      String(now.getHours()).padStart(2, '0') + ':' +
+      String(now.getMinutes()).padStart(2, '0') + ']';
+    // Insert at top of editor (line above existing content)
+    var tsLine = '<span style="color:var(--text-muted);font-size:0.75rem;">' + ts + '</span><br><br>';
+    editor.innerHTML = tsLine + editor.innerHTML;
+    editor.focus();
+    // Trigger auto-save
+    var evt = new Event('input', { bubbles: true });
+    editor.dispatchEvent(evt);
+  });
+
+  // ── character-level highlight helper ──
+  function toggleHighlight() {
+    var sel = window.getSelection();
+    if (!sel.rangeCount || sel.getRangeAt(0).collapsed) return;
+    var range = sel.getRangeAt(0);
+    // Check if selected text is already inside a highlight span
+    var node = range.commonAncestorContainer;
+    var hlSpan = (node.nodeType === 1 && node.classList && node.classList.contains('hl-custom'))
+      ? node : (node.parentElement && node.parentElement.classList && node.parentElement.classList.contains('hl-custom'))
+      ? node.parentElement : null;
+    if (hlSpan) {
+      // Un-highlight: unwrap the span, keeping its children
+      var parent = hlSpan.parentNode;
+      while (hlSpan.firstChild) parent.insertBefore(hlSpan.firstChild, hlSpan);
+      parent.removeChild(hlSpan);
+    } else {
+      // Highlight: wrap selected characters in <span class="hl-custom">
+      var span = document.createElement('span');
+      span.className = 'hl-custom';
+      try { range.surroundContents(span); }
+      catch(e) {
+        var frag = range.extractContents();
+        span.appendChild(frag);
+        range.insertNode(span);
+      }
+    }
+  }
+
+  // ── formatting toolbar events ──
+  document.querySelectorAll('.fmt-btn[data-cmd]').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var cmd = this.dataset.cmd;
+      if (cmd === 'hilite') {
+        toggleHighlight();
+      } else {
+        document.execCommand(cmd, false, null);
+      }
+      document.getElementById('modal-text').focus();
+    });
+  });
+
+  // Font size selector — custom span-based to support Word-like pt sizes
+  document.getElementById('fmt-fontsize').addEventListener('change', function() {
+    var pt = this.value;
+    var sel = window.getSelection();
+    if (sel.rangeCount > 0 && !sel.getRangeAt(0).collapsed) {
+      var range = sel.getRangeAt(0);
+      // Check if selection is inside an existing font-size span; if so, update it
+      var ancestor = range.commonAncestorContainer;
+      var sizeSpan = ancestor.nodeType === 1 && ancestor.classList && ancestor.classList.contains('fs-custom')
+        ? ancestor : ancestor.parentElement && ancestor.parentElement.classList && ancestor.parentElement.classList.contains('fs-custom')
+        ? ancestor.parentElement : null;
+      if (sizeSpan) {
+        sizeSpan.style.fontSize = pt + 'pt';
+      } else {
+        var span = document.createElement('span');
+        span.className = 'fs-custom';
+        span.style.fontSize = pt + 'pt';
+        try {
+          range.surroundContents(span);
+        } catch(e) {
+          var fragment = range.extractContents();
+          span.appendChild(fragment);
+          range.insertNode(span);
+        }
+      }
+    }
+    document.getElementById('modal-text').focus();
+  });
+
+  // ── keyboard shortcuts for formatting ──
+  document.getElementById('modal-text').addEventListener('keydown', function(e) {
+    if (!e.ctrlKey && !e.metaKey) return;
+    if (e.key === 'b' || e.key === 'B') {
+      e.preventDefault();
+      document.execCommand('bold', false, null);
+    } else if (e.key === 'u' || e.key === 'U') {
+      e.preventDefault();
+      document.execCommand('underline', false, null);
+    } else if (e.key === 'h' || e.key === 'H') {
+      e.preventDefault();
+      toggleHighlight();
+    }
+  });
+
+  // ── scale toggle ──
+  var savedScale = localStorage.getItem('fwt_scale') || 'md';
+  document.documentElement.classList.add('scale-' + savedScale);
+  document.querySelectorAll('#scale-toggle button').forEach(function(btn) {
+    if (btn.dataset.scale === savedScale) btn.classList.add('active');
+    btn.addEventListener('click', function() {
+      var scale = this.dataset.scale;
+      document.documentElement.classList.remove('scale-sm', 'scale-md', 'scale-lg');
+      document.documentElement.classList.add('scale-' + scale);
+      localStorage.setItem('fwt_scale', scale);
+      document.querySelectorAll('#scale-toggle button').forEach(function(b) {
+        b.classList.toggle('active', b.dataset.scale === scale);
+      });
+    });
+  });
+
+  // ── review filter events ──
+  document.querySelectorAll('.review-filter-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      document.querySelectorAll('.review-filter-btn').forEach(function(b) { b.classList.remove('active'); });
+      this.classList.add('active');
+      reviewRange = this.dataset.reviewRange;
+      document.getElementById('review-year-picker').classList.toggle('hidden', reviewRange !== 'year');
+      document.getElementById('review-month-picker').classList.toggle('hidden', reviewRange !== 'month');
+      document.getElementById('review-custom-range').classList.toggle('hidden', reviewRange !== 'custom');
+      renderReview();
+    });
+  });
+
+  document.getElementById('review-apply-range').addEventListener('click', function() {
+    renderReview();
+  });
+
+  // Enter key triggers review re-render for year/month inputs
+  document.getElementById('review-year-input').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') { renderReview(); }
+  });
+  document.getElementById('review-my-year').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') { renderReview(); }
+  });
+  document.getElementById('review-month-select').addEventListener('change', function() {
+    renderReview();
+  });
+
+  // ── language toggle event ──
+  document.querySelectorAll('#lang-toggle button').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      setLang(this.dataset.lang);
+    });
+  });
+
+  // ── events ──
+  function onBirthChange() {
+    updateDayOptions();
+    const val = getBirthValue();
+    if (!val) return;
+    const d = parseDate(val);
+    if (!d) return;
+    if (d > new Date()) {
+      errorMsg.textContent = t('err-future-birth');
+      errorMsg.classList.remove('hidden');
+      return;
+    }
+    birthDate = val;
+    localStorage.setItem('fwt_birth', val);
+    rebuild();
+  }
+
+  birthYearSelect.addEventListener('change', onBirthChange);
+  birthMonthSelect.addEventListener('change', onBirthChange);
+  birthDaySelect.addEventListener('change', onBirthChange);
+
+  lifespanSlider.addEventListener('input', function() {
+    const val = parseInt(this.value) || 80;
+    lifespanDisplay.textContent = val + ' ' + t('years-old');
+  });
+  lifespanSlider.addEventListener('change', function() {
+    lifespan = parseInt(this.value) || 80;
+    localStorage.setItem('fwt_lifespan', String(lifespan));
+    rebuild();
+  });
+
+  // ── AI 助手 ──
+  // ── Chinese numeral normalizer ──
+  function normalizeCnNumerals(text) {
+    var r = text;
+    // Multi-character compound numerals must be processed before single characters
+    var pairs = [
+      ['十二', '12'], ['十一', '11'],
+      ['二十', '20'], ['三十', '30'], ['四十', '40'],
+      ['五十', '50'], ['六十', '60'], ['七十', '70'],
+      ['八十', '80'], ['九十', '90'],
+      ['一百', '100'], ['两百', '200'], ['三百', '300'],
+      ['四百', '400'], ['五百', '500'], ['六百', '600'],
+      ['七百', '700'], ['八百', '800'], ['九百', '900'],
+      ['十', '10'],
+      ['九', '9'], ['八', '8'], ['七', '7'], ['六', '6'],
+      ['五', '5'], ['四', '4'], ['三', '3'], ['二', '2'], ['一', '1'],
+      ['零', '0']
+    ];
+    for (var i = 0; i < pairs.length; i++) {
+      r = r.split(pairs[i][0]).join(pairs[i][1]);
+    }
+    return r;
+  }
+
+  // ── natural language time parser ──
+  function parseAgentQuery(text) {
+    text = normalizeCnNumerals(text);
+    const now = new Date();
+    const cy = now.getFullYear();
+    const cm = now.getMonth();
+    const birthY = parseInt(birthDate.split('-')[0]);
+    const birthM = parseInt(birthDate.split('-')[1]) - 1;
+
+    // 第X周 / X周
+    var m = text.match(/第?\s*(\d{1,4})\s*周/);
+    if (m) {
+      var wi = parseInt(m[1]);
+      if (wi > 0) {
+        var d = getDateFromWeekIndex(wi, birthDate);
+        if (d) return { type: 'week', startWeek: wi, endWeek: wi, label: (_lang === 'en' ? 'Week ' : '第 ') + wi + (_lang === 'en' ? '' : ' 周') };
+      }
+    }
+
+    // 全部 / 所有记录
+    if (/全部|所有|全部记录/.test(text)) {
+      var d = calc(birthDate, lifespan);
+      var lw = d ? Math.floor(d.livedW) : 0;
+      return { type: 'all', startWeek: 1, endWeek: Math.max(1, lw), label: (_lang === 'en' ? 'All time lived' : '全部已过时光') };
+    }
+
+    // 最近X个月 / 最近X周 / 最近X天
+    m = text.match(/最近\s*(\d+)\s*(个月|周|天)/);
+    if (m) {
+      var num = parseInt(m[1]);
+      var unit = m[2];
+      var start = new Date(now);
+      if (unit === '个月') start.setMonth(start.getMonth() - num);
+      else if (unit === '周') start.setDate(start.getDate() - num * 7);
+      else start.setDate(start.getDate() - num);
+      var end = new Date(now);
+      var sd = start.getFullYear() + '-' + String(start.getMonth()+1).padStart(2,'0') + '-' + String(start.getDate()).padStart(2,'0');
+      var ed = end.getFullYear() + '-' + String(end.getMonth()+1).padStart(2,'0') + '-' + String(end.getDate()).padStart(2,'0');
+      var sw = getWeekIndexFromDate(sd, birthDate);
+      var ew = getWeekIndexFromDate(ed, birthDate);
+      if (sw !== null && ew !== null) return { type: 'range', startWeek: sw, endWeek: ew, label: (_lang === 'en' ? 'Last ' : '最近 ') + num + ' ' + (_lang === 'en' ? (unit === '个月' ? 'months' : unit === '周' ? 'weeks' : 'days') : unit) };
+    }
+
+    // 前X年 / 头X年
+    m = text.match(/^[前头]\s*(\d+)\s*年/);
+    if (m) {
+      var years = parseInt(m[1]);
+      var endY = birthY + years - 1;
+      var sd = birthDate;
+      var ed = endY + '-12-31';
+      var sw = getWeekIndexFromDate(sd, birthDate);
+      var ew = getWeekIndexFromDate(ed, birthDate);
+      if (sw !== null && ew !== null) return { type: 'range', startWeek: sw, endWeek: ew, label: (_lang === 'en' ? 'First ' : '前 ') + years + ' years' };
+    }
+
+    // YYYY年M月 / 去年X月 / 今年X月 / X月
+    var year = null, month = null;
+    m = text.match(/(\d{4})\s*年\s*(\d{1,2})\s*月/);
+    if (m) { year = parseInt(m[1]); month = parseInt(m[2]) - 1; }
+    else {
+      m = text.match(/去年\s*(\d{1,2})\s*月/);
+      if (m) { year = cy - 1; month = parseInt(m[1]) - 1; }
+      else {
+        m = text.match(/今年\s*(\d{1,2})\s*月/);
+        if (m) { year = cy; month = parseInt(m[1]) - 1; }
+        else {
+          m = text.match(/(\d{1,2})\s*月(?!份|底|初)/);
+          if (!/年/.test(text) && m) { year = cy; month = parseInt(m[1]) - 1; }
+        }
+      }
+    }
+    if (year !== null && month !== null) {
+      var startD = new Date(year, month, 1);
+      var endD = new Date(year, month + 1, 0);
+      var sd2 = startD.getFullYear() + '-' + String(startD.getMonth()+1).padStart(2,'0') + '-' + String(startD.getDate()).padStart(2,'0');
+      var ed2 = endD.getFullYear() + '-' + String(endD.getMonth()+1).padStart(2,'0') + '-' + String(endD.getDate()).padStart(2,'0');
+      var sw2 = getWeekIndexFromDate(sd2, birthDate);
+      var ew2 = getWeekIndexFromDate(ed2, birthDate);
+      if (sw2 !== null && ew2 !== null) return { type: 'month', startWeek: sw2, endWeek: ew2, label: (_lang === 'en' ? t('months')[month] + ' ' + year : year + ' 年 ' + (month+1) + ' 月') };
+    }
+
+    // YYYY年夏天/春天/秋天/冬天 (must be checked before bare YYYY年)
+    var seasonMap = { '春': [2,4], '夏': [5,7], '秋': [8,10], '冬': [11,1] };
+    for (var s in seasonMap) {
+      if (text.indexOf(s + '天') > -1 || text.indexOf('季') > -1 && text.indexOf(s) > -1) {
+        m = text.match(/(\d{4})\s*年/);
+        if (m) year = parseInt(m[1]);
+        else year = cy;
+        var r = seasonMap[s];
+        var sd4 = new Date(year, r[0], 1);
+        var ed4 = new Date(year, r[1], 0);
+        var sds = sd4.getFullYear() + '-' + String(sd4.getMonth()+1).padStart(2,'0') + '-' + String(sd4.getDate()).padStart(2,'0');
+        var eds = ed4.getFullYear() + '-' + String(ed4.getMonth()+1).padStart(2,'0') + '-' + String(ed4.getDate()).padStart(2,'0');
+        var sw4 = getWeekIndexFromDate(sds, birthDate);
+        var ew4 = getWeekIndexFromDate(eds, birthDate);
+        if (sw4 !== null && ew4 !== null) return { type: 'range', startWeek: sw4, endWeek: ew4, label: (_lang === 'en' ? { '春':'Spring','夏':'Summer','秋':'Autumn','冬':'Winter' }[s] + ' ' + year : year + ' 年 ' + s + '天') };
+      }
+    }
+
+    // 去年 / 今年 / 前年 / YYYY年
+    if (/去年/.test(text)) year = cy - 1;
+    else if (/前年/.test(text)) year = cy - 2;
+    else if (/今年/.test(text)) year = cy;
+    else {
+      m = text.match(/(\d{4})\s*年/);
+      if (m) year = parseInt(m[1]);
+    }
+    if (year !== null) {
+      var sd3 = year + '-01-01';
+      var ed3 = year + '-12-31';
+      var sw3 = getWeekIndexFromDate(sd3, birthDate);
+      var ew3 = getWeekIndexFromDate(ed3, birthDate);
+      if (sw3 !== null && ew3 !== null) return { type: 'year', startWeek: sw3, endWeek: ew3, label: (_lang === 'en' ? '' + year : year + ' 年') };
+    }
+
+    // XXXX到XXXX / XXXX至XXXX
+    m = text.match(/(\d{4})\s*(?:年)?\s*(?:到|至|~|--|——)\s*(\d{4})\s*年/);
+    if (m) {
+      var y1 = parseInt(m[1]), y2 = parseInt(m[2]);
+      var sd5 = y1 + '-01-01';
+      var ed5 = y2 + '-12-31';
+      var sw5 = getWeekIndexFromDate(sd5, birthDate);
+      var ew5 = getWeekIndexFromDate(ed5, birthDate);
+      if (sw5 !== null && ew5 !== null) return { type: 'range', startWeek: sw5, endWeek: ew5, label: y1 + ' — ' + y2 };
+    }
+
+    // ── English query patterns ──
+    var textLc = text.toLowerCase().trim();
+
+    // "week X" or "X week" (English)
+    m = textLc.match(/(?:week\s*(\d{1,4}))|(?:(\d{1,4})\s*week)/);
+    if (m) {
+      var wi = parseInt(m[1] || m[2]);
+      if (wi > 0) {
+        var d = getDateFromWeekIndex(wi, birthDate);
+        if (d) return { type: 'week', startWeek: wi, endWeek: wi, label: 'Week ' + wi };
+      }
+    }
+
+    // "all" / "everything" / "all records" / "all entries" (English)
+    if (/^(all|everything|all records|all entries|my entire life|my whole life)$/i.test(textLc) || /全部|所有/.test(text)) {
+      var d = calc(birthDate, lifespan);
+      var lw = d ? Math.floor(d.livedW) : 0;
+      return { type: 'all', startWeek: 1, endWeek: Math.max(1, lw), label: 'All time lived' };
+    }
+
+    // "last X months/weeks/days" / "past X months/weeks/days" / "recent X months/weeks/days" (English)
+    m = textLc.match(/(?:last|past|recent|previous)\s*(\d+)\s*(months|weeks|days)/);
+    if (m) {
+      var num = parseInt(m[1]);
+      var unit = m[2];
+      var start = new Date(now);
+      if (unit === 'months') start.setMonth(start.getMonth() - num);
+      else if (unit === 'weeks') start.setDate(start.getDate() - num * 7);
+      else start.setDate(start.getDate() - num);
+      var end = new Date(now);
+      var sd = start.getFullYear() + '-' + String(start.getMonth()+1).padStart(2,'0') + '-' + String(start.getDate()).padStart(2,'0');
+      var ed = end.getFullYear() + '-' + String(end.getMonth()+1).padStart(2,'0') + '-' + String(end.getDate()).padStart(2,'0');
+      var sw = getWeekIndexFromDate(sd, birthDate);
+      var ew = getWeekIndexFromDate(ed, birthDate);
+      if (sw !== null && ew !== null) return { type: 'range', startWeek: sw, endWeek: ew, label: 'Last ' + num + ' ' + (unit === 'months' ? 'months' : unit === 'weeks' ? 'weeks' : 'days') };
+    }
+
+    // "last week" / "this week" (English)
+    if (/last week/i.test(textLc)) {
+      // Last week: 7 days ago
+      var lwStart = new Date(now); lwStart.setDate(lwStart.getDate() - 7);
+      var lwEnd = new Date(now);
+      var lws = lwStart.getFullYear() + '-' + String(lwStart.getMonth()+1).padStart(2,'0') + '-' + String(lwStart.getDate()).padStart(2,'0');
+      var lwe = lwEnd.getFullYear() + '-' + String(lwEnd.getMonth()+1).padStart(2,'0') + '-' + String(lwEnd.getDate()).padStart(2,'0');
+      var sw_lw = getWeekIndexFromDate(lws, birthDate);
+      var ew_lw = getWeekIndexFromDate(lwe, birthDate);
+      if (sw_lw !== null && ew_lw !== null) return { type: 'range', startWeek: sw_lw, endWeek: ew_lw, label: 'Last week' };
+    }
+    else if (/this week/i.test(textLc)) {
+      var twStart = new Date(now); twStart.setDate(twStart.getDate() - 7);
+      var twEnd = new Date(now);
+      var tws = twStart.getFullYear() + '-' + String(twStart.getMonth()+1).padStart(2,'0') + '-' + String(twStart.getDate()).padStart(2,'0');
+      var twe = twEnd.getFullYear() + '-' + String(twEnd.getMonth()+1).padStart(2,'0') + '-' + String(twEnd.getDate()).padStart(2,'0');
+      var sw_tw = getWeekIndexFromDate(tws, birthDate);
+      var ew_tw = getWeekIndexFromDate(twe, birthDate);
+      if (sw_tw !== null && ew_tw !== null) return { type: 'range', startWeek: sw_tw, endWeek: ew_tw, label: 'This week' };
+    }
+
+    // English month: "last month" / "this month" / "January 2024" / "Jan 2024"
+    var enMonthMatch = null;
+    // First try "last month" / "this month"
+    if (/last month/i.test(textLc)) { year = cy; month = cm - 1; enMonthMatch = true; }
+    else if (/this month/i.test(textLc)) { year = cy; month = cm; enMonthMatch = true; }
+    else {
+      // Try English month names: "January 2024", "Jan 2024"
+      var enMonths = ['january','february','march','april','may','june','july','august','september','october','november','december'];
+      var enMonthsShort = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
+      for (var mi = 0; mi < enMonths.length; mi++) {
+        if (new RegExp(enMonths[mi] + '|' + enMonthsShort[mi], 'i').test(text)) {
+          month = mi;
+          var yrM = text.match(/\b(\d{4})\b/);
+          year = yrM ? parseInt(yrM[1]) : cy;
+          enMonthMatch = true;
+          break;
+        }
+      }
+    }
+    if (enMonthMatch && year !== null && month !== null) {
+      var startD = new Date(year, month, 1);
+      var endD = new Date(year, month + 1, 0);
+      var sd2 = startD.getFullYear() + '-' + String(startD.getMonth()+1).padStart(2,'0') + '-' + String(startD.getDate()).padStart(2,'0');
+      var ed2 = endD.getFullYear() + '-' + String(endD.getMonth()+1).padStart(2,'0') + '-' + String(endD.getDate()).padStart(2,'0');
+      var sw2 = getWeekIndexFromDate(sd2, birthDate);
+      var ew2 = getWeekIndexFromDate(ed2, birthDate);
+      if (sw2 !== null && ew2 !== null) return { type: 'month', startWeek: sw2, endWeek: ew2, label: t('months')[month] + ' ' + year };
+    }
+
+    // English seasons: "spring 2024", "summer 2024", etc.
+    var enSeasonMap = { 'spring': [2,4], 'summer': [5,7], 'autumn': [8,10], 'fall': [8,10], 'winter': [11,1] };
+    for (var enS in enSeasonMap) {
+      if (textLc.indexOf(enS) > -1) {
+        m = text.match(/\b(\d{4})\b/);
+        if (m) year = parseInt(m[1]);
+        else year = cy;
+        var r = enSeasonMap[enS];
+        var sd4 = new Date(year, r[0], 1);
+        var ed4 = new Date(year, r[1], 0);
+        var sds = sd4.getFullYear() + '-' + String(sd4.getMonth()+1).padStart(2,'0') + '-' + String(sd4.getDate()).padStart(2,'0');
+        var eds = ed4.getFullYear() + '-' + String(ed4.getMonth()+1).padStart(2,'0') + '-' + String(ed4.getDate()).padStart(2,'0');
+        var sw4 = getWeekIndexFromDate(sds, birthDate);
+        var ew4 = getWeekIndexFromDate(eds, birthDate);
+        if (sw4 !== null && ew4 !== null) return { type: 'range', startWeek: sw4, endWeek: ew4, label: enS.charAt(0).toUpperCase() + enS.slice(1) + ' ' + year };
+      }
+    }
+
+    // "last year" / "this year" / "next year" / YYYY (English)
+    year = null;
+    if (/last year/i.test(textLc)) year = cy - 1;
+    else if (/this year/i.test(textLc) || /current year/i.test(textLc)) year = cy;
+    else if (/next year/i.test(textLc)) year = cy + 1;
+    else {
+      m = text.match(/\b(19\d\d|20\d\d)\b/);
+      if (m) year = parseInt(m[1]);
+    }
+    if (year !== null && year >= 1900 && year <= 2100) {
+      var sd3 = year + '-01-01';
+      var ed3 = year + '-12-31';
+      var sw3 = getWeekIndexFromDate(sd3, birthDate);
+      var ew3 = getWeekIndexFromDate(ed3, birthDate);
+      if (sw3 !== null && ew3 !== null) return { type: 'year', startWeek: sw3, endWeek: ew3, label: '' + year };
+    }
+
+    // "first X years" (English)
+    m = textLc.match(/^first\s*(\d+)\s*years/);
+    if (m) {
+      var years = parseInt(m[1]);
+      var endY = birthY + years - 1;
+      var sd = birthDate;
+      var ed = endY + '-12-31';
+      var sw = getWeekIndexFromDate(sd, birthDate);
+      var ew = getWeekIndexFromDate(ed, birthDate);
+      if (sw !== null && ew !== null) return { type: 'range', startWeek: sw, endWeek: ew, label: 'First ' + years + ' years' };
+    }
+
+    // YYYY to YYYY / YYYY - YYYY (English)
+    m = textLc.match(/(\d{4})\s*(?:to|-|–|—|~)\s*(\d{4})/);
+    if (m) {
+      var y1 = parseInt(m[1]), y2 = parseInt(m[2]);
+      var sd5 = y1 + '-01-01';
+      var ed5 = y2 + '-12-31';
+      var sw5 = getWeekIndexFromDate(sd5, birthDate);
+      var ew5 = getWeekIndexFromDate(ed5, birthDate);
+      if (sw5 !== null && ew5 !== null) return { type: 'range', startWeek: sw5, endWeek: ew5, label: y1 + ' — ' + y2 };
+    }
+
+    return null;
+  }
+
+  // ── agent corpus integration ──
+  var corpus = (typeof pinpinCorpus !== 'undefined') ? pinpinCorpus : null;
+
+  function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+  function corpusCategory(category) {
+    // Try language-specific version first, fall back to Chinese
+    if (_lang === 'en') {
+      var enCat = category + '_en';
+      if (corpus && corpus[enCat] && corpus[enCat].length > 0) {
+        return enCat;
+      }
+    }
+    return (corpus && corpus[category] && corpus[category].length > 0) ? category : null;
+  }
+
+  function corpusText(category, fallback) {
+    var cat = corpusCategory(category);
+    if (cat && corpus) {
+      return pick(corpus[cat]);
+    }
+    return fallback;
+  }
+
+  function sceneEmoji(type) {
+    if (corpus && corpus.sceneEmojis && corpus.sceneEmojis[type]) {
+      return corpus.sceneEmojis[type];
+    }
+    return '';
+  }
+
+  // ── agent observation check functions ──
+  var agentObservationChecks = [
+    { check: function(e) { return e.length >= 10; }, id: null, fallback: '那段时间你留下了不少记录——生活似乎有很多值得咀嚼的片段。' },
+    { check: function(e) { return e.length >= 5; }, id: null, fallback: '你有好几条记录留在了那段时间。回头看看，那时的自己其实说了不少话。' },
+    { check: function(e) { var w = e.reduce(function(s,en){return s+(en.text||'').length;},0); return w > 500; }, id: 'mediumWords', fallback: '你写了很多字——不只是记录，更像是在认真地梳理自己。' },
+    { check: function(e) { var w = e.reduce(function(s,en){return s+(en.text||'').length;},0); return w > 200 && w <= 500; }, id: 'mediumWords', fallback: '你写了一些话，不长不短——刚好够把当时的感受留下来。' },
+    { check: function(e) { var w = e.reduce(function(s,en){return s+(en.text||'').length;},0); return w > 0 && w <= 200; }, id: 'shortWords', fallback: '你的记录很简洁——有时候，千言万语不如寥寥几笔。' },
+    { check: function(e) { var m = e.reduce(function(s,en){return s+(en.media||[]).length;},0); return m >= 3; }, id: 'manyMedia', fallback: '你拍了不少照片/文件——你在用画面捕捉当时的世界。' },
+    { check: function(e) { var m = e.reduce(function(s,en){return s+(en.media||[]).length;},0); return m > 0 && m < 3; }, id: 'someMedia', fallback: '除了文字，你还留下了影像或文件——记忆有了更多的维度。' },
+  ];
+
+  function getObsArray() {
+    if (!corpus) return null;
+    var arr = (_lang === 'en' && corpus.observations_en) ? corpus.observations_en : corpus.observations;
+    return arr || null;
+  }
+
+  function getObservationText(filtered) {
+    var obs = getObsArray();
+    if (filtered.length === 0) {
+      if (obs) {
+        for (var j = 0; j < obs.length; j++) {
+          if (obs[j].id === 'noRecords') return obs[j].text;
+        }
+      }
+      return _lang === 'en' ? 'You haven\'t left any entries from that time.\n\nBut that\'s okay — the you back then was surely living life fully too. Some moments don\'t need to be written down to become part of you.' : '那段时间你还没有留下记录。\n\n不过没关系——那时候的你，一定也在认真地生活着。有些时光不需要被写下，也会成为你的一部分。';
+    }
+    for (var i = 0; i < agentObservationChecks.length; i++) {
+      if (agentObservationChecks[i].check(filtered)) {
+        var o = agentObservationChecks[i];
+        if (obs && o.id) {
+          for (var j = 0; j < obs.length; j++) {
+            if (obs[j].id === o.id) return obs[j].text;
+          }
+        }
+        return o.fallback;
+      }
+    }
+    // Default
+    if (obs) {
+      for (var j = 0; j < obs.length; j++) {
+        if (obs[j].id === 'default') return obs[j].text;
+      }
+    }
+    return _lang === 'en' ? 'Every moment you\'ve recorded has not passed in vain ✨' : '每一段被你记录下来的时光，都没有白白流过。✨';
+  }
+
+  // ── agent greeting / closing helpers ──
+  function getGreeting() {
+    return corpusText('greetings', '你好呀。你的每一周我都记得——问问我过去的事吧。🐾');
+  }
+  function getClosing() {
+    return corpusText('closings', '回头看不是为了回去，而是为了更好地往前走。你已经走了这么远，辛苦了。');
+  }
+
+  // ── generate agent response ──
+  async function generateAgentResponse(label, startWeek, endWeek) {
+    var data = calc(birthDate, lifespan);
+    var livedW = data ? Math.floor(data.livedW) : 0;
+    var effectiveEnd = Math.min(endWeek, livedW);
+
+    var allEntries = [];
+    try { allEntries = await getAllEntries(); } catch(e) { return t('err-agent-read'); }
+
+    var filtered = allEntries.filter(function(e) {
+      return e.weekIndex >= startWeek && e.weekIndex <= effectiveEnd;
+    });
+    filtered.sort(function(a, b) { return a.weekIndex - b.weekIndex; });
+
+    var parts = [];
+    var isSingleWeek = (startWeek === effectiveEnd);
+
+    // 1. Time label with scene emoji
+    var emoji = '';
+    if (isSingleWeek) emoji = sceneEmoji('week');
+    else if (endWeek - startWeek > 50) emoji = sceneEmoji('year') || sceneEmoji('all');
+    else emoji = sceneEmoji('weekRange');
+    parts.push(emoji + ' ' + label);
+
+    // 2. Life stage
+    if (data) {
+      var firstWeekDate = getDateFromWeekIndex(Math.max(1, startWeek), birthDate);
+      if (firstWeekDate) {
+        var ageAtTime = (firstWeekDate - parseDate(birthDate)) / (365.25 * 24 * 60 * 60 * 1000);
+        if (_lang === 'en') {
+          if (isSingleWeek) {
+            parts.push('You were about **' + ageAtTime.toFixed(1) + ' years old**, in **Week ' + startWeek + '** of your life.');
+          } else {
+            parts.push('You were about **' + ageAtTime.toFixed(1) + ' years old**, in **Weeks ' + startWeek + '–' + effectiveEnd + '** of your life.');
+          }
+        } else {
+          if (isSingleWeek) {
+            parts.push('你当时大约 **' + ageAtTime.toFixed(1) + ' 岁**，正处在生命的第 ' + startWeek + ' 周。');
+          } else {
+            parts.push('你当时大约 **' + ageAtTime.toFixed(1) + ' 岁**，正处在生命的第 ' + startWeek + ' 周到第 ' + effectiveEnd + ' 周。');
+          }
+        }
+      }
+    }
+
+    if (filtered.length === 0) {
+      parts.push(getObservationText(filtered));
+      parts.push(getClosing() + ' 🐾');
+      return parts.join('\n\n');
+    }
+
+    // 3. Statistics
+    var totalWords = 0;
+    var totalMedia = 0;
+    var mediaTypes = {};
+    filtered.forEach(function(e) {
+      totalWords += (e.text || '').length;
+      if (e.media) {
+        totalMedia += e.media.length;
+        e.media.forEach(function(m) {
+          mediaTypes[m.type] = (mediaTypes[m.type] || 0) + 1;
+        });
+      }
+    });
+
+    var statParts = [];
+    if (filtered.length === 1) {
+      statParts.push('**1 ' + (_lang === 'en' ? 'entry' : '条记录') + '**');
+    } else {
+      statParts.push('**' + filtered.length + ' ' + (_lang === 'en' ? 'entries' : '条记录') + '**');
+    }
+    if (totalWords > 0) {
+      if (_lang === 'en') {
+        statParts.push('**' + totalWords + ' words** total');
+      } else {
+        statParts.push('共 **' + totalWords + ' 个字**');
+      }
+    }
+    if (mediaTypes['image']) statParts.push(mediaTypes['image'] + ' ' + (_lang === 'en' ? 'photos' : '张照片'));
+    if (mediaTypes['audio']) statParts.push(mediaTypes['audio'] + ' ' + (_lang === 'en' ? 'recordings' : '段录音'));
+    if (mediaTypes['video']) statParts.push(mediaTypes['video'] + ' ' + (_lang === 'en' ? 'videos' : '段视频'));
+    if (mediaTypes['document']) statParts.push(mediaTypes['document'] + ' ' + (_lang === 'en' ? 'files' : '个文件'));
+    if (_lang === 'en') {
+      parts.push(statParts.join(', ') + '.');
+    } else {
+      parts.push(statParts.join('，') + '。');
+    }
+
+    // 4. Observation
+    parts.push(getObservationText(filtered));
+
+    // 5. Quote from longest entry
+    var longest = null;
+    filtered.forEach(function(e) {
+      if (e.text && e.text.trim().length > 0) {
+        if (!longest || e.text.length > longest.text.length) longest = e;
+      }
+    });
+    if (longest) {
+      var excerpt = longest.text.trim();
+      if (excerpt.length > 100) excerpt = excerpt.slice(0, 100) + '……';
+      parts.push((_lang === 'en' ? 'I noticed you wrote back then:\n> "' : '我注意到你当时写过：\n> "') + excerpt + '"');
+    }
+
+    // 6. Four-thousand-weeks reflection
+    if (data) {
+      var ageForQuote = Math.floor(data.ageYears);
+      var qArr = (_lang === 'en') ? quotes_en : quotes;
+      var q = null;
+      for (var qi = 0; qi < qArr.length; qi++) {
+        if (ageForQuote < qArr[qi].maxAge) { q = qArr[qi].text; break; }
+      }
+      if (!q) q = qArr[qArr.length - 1].text;
+      parts.push('📖 ' + (_lang === 'en' ? 'Four Thousand Weeks says:' : '四千周里说：') + '\n> ' + q);
+    }
+
+    // 7. Closing + paw signature
+    parts.push(getClosing() + ' 🐾');
+
+    return parts.join('\n\n');
+  }
+
+  // ── chat UI ──
+  var agentOpen = false;
+  var agentChatHistory = [];
+  var AGENT_CHAT_KEY = 'fwt_agent_chat';
+  var AGENT_INTRO_KEY = 'fwt_agent_intro_shown';
+  var AGENT_MAX_SAVED = 100;
+
+  var ABSENCE_DAYS = 30;
+  var LAST_VISIT_KEY = 'fwt_last_visit';
+  var TRAINING_KEY = 'fwt_training_data';
+
+  function toggleAgentPanel() {
+    agentOpen = !agentOpen;
+    document.getElementById('agent-panel').classList.toggle('visible', agentOpen);
+    document.getElementById('agent-toggle').classList.toggle('active', agentOpen);
+    if (agentOpen) {
+      var msgs = document.getElementById('agent-messages');
+      if (msgs.children.length === 0) {
+        var restored = loadAgentChat();
+        if (!restored) {
+          if (!localStorage.getItem(AGENT_INTRO_KEY)) {
+            addAgentMessage(corpusText('intro', 'Hi~ 我叫皮皮，是你的专属生命伙伴！🐾\n\n我可以帮你回顾过去任何一段时光——比如"去年一月我在干什么"，或者"第100周"。你留下的每一笔记录，我都帮你记着。\n\n有什么想知道的，随时问我吧！'), false);
+            localStorage.setItem(AGENT_INTRO_KEY, '1');
+          } else {
+            var greeting = getGreeting();
+            addAgentMessage(greeting, false);
+          }
+        }
+      }
+      // Track last visit
+      var now = Date.now();
+      var lastVisit = parseInt(localStorage.getItem(LAST_VISIT_KEY)) || 0;
+      localStorage.setItem(LAST_VISIT_KEY, String(now));
+      // Check long absence — only on page load, not on every panel toggle
+      if (msgs.children.length === 0 && lastVisit > 0) {
+        var daysGone = (now - lastVisit) / (86400000);
+        if (daysGone >= ABSENCE_DAYS) {
+          setTimeout(function() {
+            showPinpinOverlay();
+          }, 600);
+        }
+      }
+      setTimeout(function() {
+        document.getElementById('agent-input').focus();
+      }, 300);
+    }
+  }
+
+  // ── long absence overlay ──
+  function showPinpinOverlay() {
+    var overlay = document.getElementById('pinpin-overlay');
+    var dog = document.getElementById('pinpin-dog');
+    var glow = document.getElementById('pinpin-glow');
+    var speech = document.getElementById('pinpin-speech');
+    var speechText = document.getElementById('pinpin-speech-text');
+    var hint = document.getElementById('pinpin-dismiss-hint');
+
+    // Pick a message (possibly with a cheesy line appended)
+    var msg = corpusText('longAbsence', '你怎么都不找我~ 我等你等的毛都变白了🐶');
+    var cheesyCat = corpusCategory('cheesyLines');
+    if (cheesyCat && corpus[cheesyCat].length > 0 && Math.random() < 0.5) {
+      msg = msg + '\n\n' + pick(corpus[cheesyCat]);
+    }
+    speechText.textContent = msg;
+
+    // Reset states
+    dog.classList.remove('animate-in');
+    dog.style.animation = 'none';
+    void dog.offsetHeight;
+    dog.style.animation = '';
+    glow.classList.remove('visible');
+    speech.classList.remove('visible');
+    hint.classList.remove('visible');
+    overlay.classList.add('visible');
+
+    // Staggered entrance
+    requestAnimationFrame(function() {
+      requestAnimationFrame(function() {
+        // 1. Dog pops in (0.8s scale animation)
+        dog.classList.add('animate-in');
+        // 2. Glow fades (starts at 0.3s)
+        setTimeout(function() { glow.classList.add('visible'); }, 300);
+        // 3. Speech bubble slides up (starts at 0.9s)
+        setTimeout(function() { speech.classList.add('visible'); }, 900);
+        // 4. Dismiss hint (starts at 2s)
+        setTimeout(function() { hint.classList.add('visible'); }, 2000);
+      });
+    });
+
+    // Dismiss on click
+    overlay.onclick = function() {
+      overlay.classList.remove('visible');
+    };
+  }
+
+  function checkLongAbsence() {
+    // Called on page load before panel is opened
+    var lastVisit = parseInt(localStorage.getItem(LAST_VISIT_KEY)) || 0;
+    if (lastVisit === 0) {
+      localStorage.setItem(LAST_VISIT_KEY, String(Date.now()));
+      return false;
+    }
+    var daysGone = (Date.now() - lastVisit) / (86400000);
+    return daysGone >= ABSENCE_DAYS;
+  }
+
+  // ── chat persistence ──
+  function saveAgentMessages() {
+    if (agentChatHistory.length > AGENT_MAX_SAVED) {
+      agentChatHistory = agentChatHistory.slice(-AGENT_MAX_SAVED);
+    }
+    try {
+      localStorage.setItem(AGENT_CHAT_KEY, JSON.stringify(agentChatHistory));
+    } catch(e) {
+      // localStorage might be full — silently ignore
+    }
+  }
+
+  function loadAgentChat() {
+    try {
+      var saved = localStorage.getItem(AGENT_CHAT_KEY);
+      if (saved) {
+        var parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          agentChatHistory = parsed;
+          var container = document.getElementById('agent-messages');
+          container.innerHTML = '';
+          parsed.forEach(function(msg) {
+            renderAgentMessage(msg.text, msg.isUser);
+          });
+          scrollAgentToBottom();
+          return true;
+        }
+      }
+    } catch(e) {}
+    return false;
+  }
+
+  // Render a message to DOM (no persistence)
+  function renderAgentMessage(text, isUser) {
+    var div = document.createElement('div');
+    div.className = isUser ? 'user-msg' : 'agent-msg';
+    if (!isUser) {
+      var label = document.createElement('span');
+      label.className = 'msg-label';
+      label.innerHTML = '<svg class=\"dog-icon\" viewBox=\"0 0 100 100\" xmlns=\"http://www.w3.org/2000/svg\"><ellipse cx=\"50\" cy=\"78\" rx=\"26\" ry=\"16\" fill=\"#d4a548\"/><ellipse cx=\"50\" cy=\"80\" rx=\"14\" ry=\"10\" fill=\"#ede4d3\" opacity=\"0.4\"/><circle cx=\"50\" cy=\"42\" r=\"25\" fill=\"#d4a548\"/><ellipse cx=\"50\" cy=\"49\" rx=\"15\" ry=\"12\" fill=\"#f5edd6\"/><ellipse cx=\"28\" cy=\"48\" rx=\"9\" ry=\"15\" fill=\"#b88930\" transform=\"rotate(-15 28 48)\"/><ellipse cx=\"72\" cy=\"48\" rx=\"9\" ry=\"15\" fill=\"#b88930\" transform=\"rotate(15 72 48)\"/><g class=\"dog-tail-group\"><path d=\"M74 68 Q90 55 86 40\" fill=\"none\" stroke=\"#d4a548\" stroke-width=\"5\" stroke-linecap=\"round\"/></g><circle cx=\"40\" cy=\"36\" r=\"3\" fill=\"#2a1a0a\"/><circle cx=\"60\" cy=\"36\" r=\"3\" fill=\"#2a1a0a\"/><circle cx=\"41.5\" cy=\"34.5\" r=\"1.2\" fill=\"white\"/><circle cx=\"61.5\" cy=\"34.5\" r=\"1.2\" fill=\"white\"/><ellipse cx=\"50\" cy=\"45\" rx=\"3.5\" ry=\"2.5\" fill=\"#1a0a00\"/><path d=\"M46 48 Q50 52 54 48\" fill=\"none\" stroke=\"#1a0a00\" stroke-width=\"1.2\"/><ellipse cx=\"50\" cy=\"54\" rx=\"3\" ry=\"4.5\" fill=\"#e8685a\"/></svg> ' + t('agent-name');
+      div.appendChild(label);
+    }
+    var p = document.createElement('div');
+    // Convert markdown-like formatting to HTML
+    var html = text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/>\s*"(.+?)"/g, function(m, c) { return '> &ldquo;' + c + '&rdquo;'; })
+      .replace(/\n/g, '<br>');
+    p.innerHTML = html;
+    div.appendChild(p);
+
+    // Share button for agent messages
+    if (!isUser) {
+      var shareBtn = document.createElement('button');
+      shareBtn.className = 'agent-share-btn';
+      shareBtn.textContent = '↗ ' + t('share-agent');
+      shareBtn.addEventListener('click', function() {
+        // Strip markdown for clean share text
+        var cleanText = text
+          .replace(/\*\*(.+?)\*\*/g, '$1')
+          .replace(/>/g, '')
+          .replace(/\n\n/g, '\n');
+        var lines = [];
+        lines.push(t('agent-name') + ' ' + (_lang === 'en' ? 'said' : '说'));
+        lines.push('');
+        lines.push(cleanText);
+        lines.push('');
+        lines.push(_lang === 'en' ? '— from Four Thousand Weeks Life Journal' : '— 来自四千周生命倒计时');
+        lines.push(window.location.href);
+        var content = lines.join('\n');
+        navigator.clipboard.writeText(content).then(function() {
+          shareBtn.textContent = '✓ ' + t('share-copied');
+          setTimeout(function() { shareBtn.textContent = '↗ ' + t('share-agent'); }, 2000);
+        }).catch(function() {
+          var ta = document.createElement('textarea');
+          ta.value = content;
+          ta.style.position = 'fixed';
+          ta.style.opacity = '0';
+          document.body.appendChild(ta);
+          ta.select();
+          document.execCommand('copy');
+          document.body.removeChild(ta);
+          shareBtn.textContent = '✓ ' + t('share-copied');
+          setTimeout(function() { shareBtn.textContent = '↗ ' + t('share-agent'); }, 2000);
+        });
+      });
+      div.appendChild(shareBtn);
+    }
+
+    document.getElementById('agent-messages').appendChild(div);
+  }
+
+  function addAgentMessage(text, isUser) {
+    agentChatHistory.push({ text: text, isUser: isUser });
+    saveAgentMessages();
+    renderAgentMessage(text, isUser);
+    scrollAgentToBottom();
+  }
+
+  function scrollAgentToBottom() {
+    var container = document.getElementById('agent-messages');
+    container.scrollTop = container.scrollHeight;
+  }
+
+  var typingTimer = null;
+  var typingIndex = 0;
+
+  function showAgentTyping() {
+    document.getElementById('agent-typing').classList.add('visible');
+    scrollAgentToBottom();
+    // Rotate thinking texts
+    var el = document.getElementById('typing-text');
+    if (el) {
+      typingIndex = 0;
+      var texts;
+      if (corpus) {
+        texts = (_lang === 'en' && corpus.thinkingTexts_en) ? corpus.thinkingTexts_en : corpus.thinkingTexts;
+      } else {
+        texts = (_lang === 'en' ? ['Pinpin is searching through your memories…'] : ['皮皮正在翻找你的记忆……']);
+      }
+      el.textContent = texts[0];
+      typingTimer = setInterval(function() {
+        typingIndex = (typingIndex + 1) % texts.length;
+        el.textContent = texts[typingIndex];
+      }, 2500);
+    }
+  }
+
+  function hideAgentTyping() {
+    document.getElementById('agent-typing').classList.remove('visible');
+    if (typingTimer) { clearInterval(typingTimer); typingTimer = null; }
+  }
+
+  var trainingBuffer = [];
+
+  function saveTrainingSample(userText, assistantText, queryType) {
+    try {
+      var samples = JSON.parse(localStorage.getItem(TRAINING_KEY)) || [];
+      samples.push({
+        ts: new Date().toISOString(),
+        user: userText,
+        assistant: assistantText,
+        type: queryType || 'unknown'
+      });
+      // Keep last 500 samples
+      if (samples.length > 500) samples = samples.slice(-500);
+      localStorage.setItem(TRAINING_KEY, JSON.stringify(samples));
+    } catch(e) { /* ignore */ }
+  }
+
+  // ── miss-you trigger patterns ──
+  var missYouPatterns = [
+    /好久不见/i, /想你了/i, /想你[了嘛]?/i, /miss\s*(you|u)/i,
+    /我回来[了嘛]?/i, /皮皮[我]?(想|miss)/i, /[好]?久[没不]见/i,
+    /想死你/i, /好想你/i, /来看[你看]?你/i,
+    // English patterns
+    /long\s*time\s*(no\s*see)?/i, /i'?m\s*back/i, /i(\s+)?am\s*back/i,
+    /come\s*(to\s*)?see\s*you/i, /finally\s*back/i, /i\s*returned/i,
+    /good\s*to\s*see\s*you/i, /here\s*(i\s*)?(am|come)/i, /pinpin[,]?\s*(i'?m\s*)?(back|here)/i
+  ];
+
+  function checkMissYou(text) {
+    for (var i = 0; i < missYouPatterns.length; i++) {
+      if (missYouPatterns[i].test(text)) return true;
+    }
+    return false;
+  }
+
+  // ── greeting patterns ──
+  var greetingPatterns = [
+    /^(hi|hello|hey|howdy|greetings)\b/i,
+    /^nice\s+to\s+meet\s+you/i,
+    /^(good\s+)?(morning|afternoon|evening|day)/i,
+    /^what'?s\s+up/i,
+    /^sup\b/i,
+    /^yo\b/i,
+    /^(hey\s+)?(pp|pinpin|皮皮)[\s!！，,。.?？]*$/i,
+    /^(早上好|下午好|晚上好|你好|嗨|嗨喽|哈喽)/
+  ];
+
+  function checkGreeting(text) {
+    for (var i = 0; i < greetingPatterns.length; i++) {
+      if (greetingPatterns[i].test(text)) return true;
+    }
+    return false;
+  }
+
+  async function handleAgentSubmit() {
+    var input = document.getElementById('agent-input');
+    var text = input.value.trim();
+    if (!text) return;
+    input.value = '';
+    addAgentMessage(text, true);
+
+    // Check miss-you trigger
+    if (checkMissYou(text)) {
+      showPinpinOverlay();
+      var reply = corpusText('longAbsence', '你怎么都不找我~ 我等你等的毛都变白了🐶');
+      var cheesyCat = corpusCategory('cheesyLines');
+      if (cheesyCat && corpus[cheesyCat].length > 0 && Math.random() < 0.4) {
+        reply = reply + '\n\n' + pick(corpus[cheesyCat]);
+      }
+      addAgentMessage(reply, false);
+      return;
+    }
+
+    // Check friendly greeting
+    if (checkGreeting(text)) {
+      var greeting = corpusText('greetings', 'Hello! 🐾');
+      addAgentMessage(greeting, false);
+      return;
+    }
+
+    var parsed = parseAgentQuery(text);
+    if (!parsed) {
+      var hint = t('agent-hint');
+      addAgentMessage(hint, false);
+      return;
+    }
+
+    showAgentTyping();
+
+    // Small delay to let typing animation show
+    await new Promise(function(r) { setTimeout(r, 600 + Math.random() * 400); });
+
+    var response = await generateAgentResponse(parsed.label, parsed.startWeek, parsed.endWeek);
+    hideAgentTyping();
+    addAgentMessage(response, false);
+
+    // Save training sample
+    saveTrainingSample(text, response, parsed.type || 'unknown');
+  }
+
+  // ── agent event listeners ──
+  document.getElementById('agent-toggle').addEventListener('click', toggleAgentPanel);
+  document.getElementById('agent-close').addEventListener('click', toggleAgentPanel);
+  document.getElementById('agent-send').addEventListener('click', handleAgentSubmit);
+  document.getElementById('agent-input').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleAgentSubmit();
+    }
+  });
+
+  rebuild();
+
+  // ── long absence overlay on page load ──
+  var absenceShown = false;
+  if (checkLongAbsence()) {
+    // Delay to let the page render first
+    setTimeout(function() {
+      showPinpinOverlay();
+      absenceShown = true;
+      // Also update last visit so it doesn't re-trigger immediately
+      localStorage.setItem(LAST_VISIT_KEY, String(Date.now()));
+    }, 800);
+  }
+
+  // ── overlay click (close on overlay click, not on child clicks) ──
+  document.getElementById('pinpin-overlay').addEventListener('click', function(e) {
+    if (e.target === this) {
+      this.classList.remove('visible');
+    }
+  });
+})();
+</script>
+
+</body>
+</html>
