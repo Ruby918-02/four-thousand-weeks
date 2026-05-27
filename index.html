@@ -2347,6 +2347,9 @@
   const locatorDaySelect   = $('locator-day');
   const locatorInfo        = $('locator-info');
 
+  // ── locator state ──
+  var lastLocatedWeek = null;
+
   // ── translations ──
   var _lang = localStorage.getItem('fwt_lang') || 'zh';
 
@@ -2616,6 +2619,22 @@
     document.querySelectorAll('#lang-toggle button').forEach(function(btn) {
       btn.classList.toggle('active', btn.dataset.lang === _lang);
     });
+
+    // Update locator info text if a week was located
+    if (typeof lastLocatedWeek === "number" && lastLocatedWeek > 0) {
+      var wi2 = lastLocatedWeek;
+      var date2 = getDateFromWeekIndex(wi2, birthDate);
+      if (date2) {
+        var dateStr2;
+        if (_lang === "en") {
+          var monthsEn3 = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+          dateStr2 = monthsEn3[date2.getMonth()] + " " + date2.getDate() + ", " + date2.getFullYear();
+        } else {
+          dateStr2 = date2.getFullYear() + " 年 " + (date2.getMonth() + 1) + " 月 " + date2.getDate() + " 日";
+        }
+        locatorInfo.textContent = "→ " + t("week-label") + " " + wi2 + " (" + dateStr2 + ")";
+      }
+    }
   }
 
   // ── state ──
@@ -4071,6 +4090,7 @@
       dateStr = date.getFullYear() + ' 年 ' + (date.getMonth() + 1) + ' 月 ' + date.getDate() + ' 日';
     }
     locatorInfo.textContent = '→ ' + t('week-label') + ' ' + wi + ' (' + dateStr + ')';
+    lastLocatedWeek = wi;
     const activeView = document.querySelector('.view-btn.active');
     if (activeView && activeView.dataset.view === 'year') {
       renderYearView(date.getFullYear());
@@ -4103,6 +4123,7 @@
       dateStr = date.getFullYear() + ' 年 ' + (date.getMonth() + 1) + ' 月 ' + date.getDate() + ' 日';
     }
     locatorInfo.textContent = '→ ' + t('week-label') + ' ' + wi + ' (' + dateStr + ')';
+    lastLocatedWeek = wi;
     const activeView = document.querySelector('.view-btn.active');
     if (activeView && activeView.dataset.view === 'year') {
       renderYearView(date.getFullYear());
@@ -4133,6 +4154,7 @@
     updateLocatorDayOptions();
     locatorDaySelect.value = String(now.getDate());
     locatorInfo.textContent = '';
+    lastLocatedWeek = null;
     var data = calc(birthDate, lifespan);
     if (data && !data.error) {
       var lived = data.livedW;
