@@ -2627,6 +2627,8 @@
 
     // Update month selects
     populateMonthSelects();
+    populateMonthSelect(birthMonthSelect);
+    populateMonthSelect(locatorMonthSelect);
 
     // Update lifespan display label
     lifespanDisplay.textContent = parseInt(lifespanSlider.value) + ' ' + t('years-old');
@@ -2673,6 +2675,20 @@
       sel.appendChild(opt);
     }
   }
+  function populateMonthSelect(sel) {
+    sel.innerHTML = '';
+    for (let mi = 1; mi <= 12; mi++) {
+      const opt = document.createElement('option');
+      opt.value = String(mi);
+      if (_lang === 'en') {
+        var monthsEn = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        opt.textContent = monthsEn[mi - 1];
+      } else {
+        opt.textContent = String(mi);
+      }
+      sel.appendChild(opt);
+    }
+  }
   function updateDayOptions() {
     const year = parseInt(birthYearSelect.value) || 2000;
     const month = parseInt(birthMonthSelect.value) || 1;
@@ -2705,7 +2721,7 @@
     const minYear = parseInt(birthDate.split('-')[0]);
     const maxYear = getLocatorMaxYear();
     populateSelect(locatorYearSelect, minYear, maxYear);
-    populateSelect(locatorMonthSelect, 1, 12);
+    populateMonthSelect(locatorMonthSelect);
     updateLocatorDayOptions();
     const now = new Date();
     locatorYearSelect.value = String(now.getFullYear());
@@ -2723,7 +2739,7 @@
   function populateBirthSelects() {
     const now = new Date();
     populateSelect(birthYearSelect, 1900, now.getFullYear());
-    populateSelect(birthMonthSelect, 1, 12);
+    populateMonthSelect(birthMonthSelect);
   }
   function setBirthSelects(dateStr) {
     const parts = dateStr.split('-');
@@ -4120,6 +4136,13 @@
   // ── flip card click ──
   remainCard.addEventListener('click', function() {
     this.classList.toggle('flipped');
+    // Refresh quotes on each flip
+    var flipData = calc(birthDate, lifespan);
+    if (flipData && !flipData.error) {
+      var fq = getQuote(flipData.ageYears, flipData.remainW, flipData.pct);
+      flipQuoteAge.innerHTML = insertBreak(fq.ageQuote);
+      flipQuoteRemain.innerHTML = insertBreak(fq.encourage);
+    }
   });
 
   // ── locator event handlers ──
