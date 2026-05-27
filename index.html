@@ -3152,6 +3152,8 @@
       entryText = entryText.replace(/\n/g, '<br>');
     }
     document.getElementById('modal-text').innerHTML = entryText;
+    // Set initial timestamp once when opening (not on every auto-save)
+    applyAutoTimestamp(document.getElementById('modal-text'));
     currentMedia = entry && entry.media ? entry.media.slice() : [];
     renderMediaGrid();
     document.getElementById('modal-status').textContent = '';
@@ -3681,7 +3683,6 @@
     autoSaveTimer = setTimeout(function() {
       if (currentModalWeek === null) return;
       var editor = document.getElementById('modal-text');
-      applyAutoTimestamp(editor);
       var text = editor.innerHTML;
       if (text === '<br>' || text === '<br style="">' || text.indexOf('<') === -1 && text.trim() === '') text = '';
       var status = document.getElementById('modal-status');
