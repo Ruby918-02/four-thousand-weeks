@@ -2172,7 +2172,7 @@
       <span class="modal-timestamp-label" id="modal-timestamp-label"></span>
       <div style="display:flex;gap:0.4rem;align-items:center;flex-wrap:wrap;">
         <label class="auto-ts-toggle" id="auto-ts-label" title="每次保存自动更新编辑时间">
-          <input type="checkbox" id="auto-ts-check">
+          <input type="checkbox" id="auto-ts-check" checked>
           <span data-i18n="auto-ts-label">⏱ 自动</span>
         </label>
         <button class="modal-timestamp-btn" id="modal-timestamp-insert" style="display:none" data-i18n="modal-insert-timestamp">+ 插入时间</button>
@@ -3190,7 +3190,6 @@
     if (autoSaveTimer) clearTimeout(autoSaveTimer);
     if (currentModalWeek !== null) {
       var editor = document.getElementById('modal-text');
-      applyAutoTimestamp(editor);
       var text = editor.innerHTML;
       if (text === '<br>' || text === '<br style="">' || text.indexOf('<') === -1 && text.trim() === '') text = '';
       saveEntry(currentModalWeek, { text: text, media: currentMedia }).catch(function() {});
@@ -3232,10 +3231,7 @@
   async function saveWeekEntry() {
     if (currentModalWeek === null) return;
 
-    // Auto-timestamp before save
     var editor = document.getElementById('modal-text');
-    applyAutoTimestamp(editor);
-
     var text = editor.innerHTML;
     // Clean up empty editor content
     if (text === '<br>' || text === '<br style="">' || text.indexOf('<') === -1 && text.trim() === '') {
