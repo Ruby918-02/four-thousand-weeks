@@ -1112,6 +1112,58 @@
   }
   .modal-overlay.fullscreen .media-item.document embed { height: 420px; }
   .modal-overlay.fullscreen .media-item.document { max-width: 480px; }
+
+  /* ── media item label & context menu ── */
+  .media-label {
+    font-size: 0.68rem;
+    color: var(--text-muted);
+    text-align: center;
+    padding: 0.2rem 0.3rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 120px;
+    user-select: none;
+  }
+  .media-item.document .media-label {
+    display: none;
+  }
+  .media-context-menu {
+    position: fixed;
+    z-index: 11000;
+    background: #1c1c2a;
+    border: 1px solid var(--surface-border);
+    border-radius: 8px;
+    padding: 0.3rem 0;
+    min-width: 140px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+    display: none;
+  }
+  .media-context-menu.visible { display: block; }
+  .media-context-menu-item {
+    padding: 0.4rem 1rem;
+    font-size: 0.82rem;
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: background 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+  .media-context-menu-item:hover {
+    background: rgba(255,255,255,0.06);
+    color: var(--gold);
+  }
+  .media-context-menu-item .ctx-icon {
+    font-size: 0.75rem;
+    width: 1.2rem;
+    text-align: center;
+    flex-shrink: 0;
+  }
+  .media-item {
+    cursor: context-menu;
+  }
+
   .modal-footer {
     display: flex;
     gap: 0.5rem;
@@ -2337,6 +2389,7 @@
       'share-copied': '已复制到剪贴板 ✓',
       'share-agent': '分享这条回复',
       'auto-saved': '已自动保存',
+      'media-rename': '重命名',
       'modal-save': '保存',
       'agent-name': '皮皮',
       'agent-subtitle': '你的生命伙伴',
@@ -2427,6 +2480,7 @@
       'share-copied': 'Copied to clipboard ✓',
       'share-agent': 'Share this reply',
       'auto-saved': 'Auto saved',
+      'media-rename': 'Rename',
       'modal-save': 'Save',
       'agent-name': 'Pinpin',
       'agent-subtitle': 'Your Life Companion',
@@ -3279,12 +3333,23 @@
     return a;
   }
 
+  var contextMediaIndex = -1;
+
   function renderMediaGrid() {
     const grid = document.getElementById('media-grid');
     grid.innerHTML = '';
     currentMedia.forEach(function(item, index) {
       const div = document.createElement('div');
       div.className = 'media-item';
+      // Right-click for rename context menu
+      div.addEventListener('contextmenu', function(e) {
+        e.preventDefault();
+        contextMediaIndex = index;
+        var menu = document.getElementById('media-context-menu');
+        menu.style.left = e.clientX + 'px';
+        menu.style.top = e.clientY + 'px';
+        menu.classList.add('visible');
+      });
       const url = URL.createObjectURL(item.data);
       if (item.type === 'image') {
         const img = document.createElement('img');
@@ -3365,6 +3430,32 @@
       grid.appendChild(div);
     });
   }
+
+  // ── media context menu handlers ──
+  function hideContextMenu() {
+    document.getElementById('media-context-menu').classList.remove('visible');
+  }
+  document.getElementById('media-rename-btn').addEventListener('click', function() {
+    hideContextMenu();
+    if (contextMediaIndex < 0 || contextMediaIndex >= currentMedia.length) return;
+    var item = currentMedia[contextMediaIndex];
+    var oldName = item.name || '';
+    var newName = prompt(_lang === 'en' ? 'Rename file:' : '重命名文件:', oldName);
+    if (newName && newName.trim() && newName !== oldName) {
+      item.name = newName.trim();
+      renderMediaGrid();
+    }
+  });
+  document.addEventListener('click', function(e) {
+    if (!e.target.closest('#media-context-menu')) {
+      hideContextMenu();
+    }
+  });
+  document.addEventListener('contextmenu', function(e) {
+    if (!e.target.closest('.media-item')) {
+      hideContextMenu();
+    }
+  });
 
   function addFileToMedia(file, type) {
     if (!file) return;
@@ -5091,6 +5182,13 @@
   });
 })();
 </script>
+
+<!-- ── media context menu ── -->
+<div class="media-context-menu" id="media-context-menu">
+  <div class="media-context-menu-item" id="media-rename-btn">
+    <span class="ctx-icon">✏️</span> <span data-i18n="media-rename">重命名</span>
+  </div>
+</div>
 
 </body>
 </html>
